@@ -84,7 +84,7 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
         case WM_DRAWITEM:
         {
             LPDRAWITEMSTRUCT pdis = (LPDRAWITEMSTRUCT)lParam;
-            if ( ( pdis->CtlID < IDC_COLOR1 || pdis->CtlID > IDC_COLOR6 ) && pdis->CtlID != IDC_BKGCOLOR && pdis->CtlID != IDC_BARCOLOR )
+            if ( ( pdis->CtlID < IDC_COLOR1 || pdis->CtlID > IDC_COLOR16 ) && pdis->CtlID != IDC_BKGCOLOR && pdis->CtlID != IDC_BARCOLOR )
                 return FALSE;
 
             SetDCBrushColor( pdis->hDC, (COLORREF)GetWindowLongPtr( pdis->hwndItem, GWLP_USERDATA ) );
@@ -97,21 +97,13 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
             Changed( hWnd );
             switch ( iId )
             {
-                case IDC_SHOWCUSTOMKEYS:
-                    EnableWindow( GetDlgItem( hWnd, IDC_FIRSTKEY ), TRUE );
-                    EnableWindow( GetDlgItem( hWnd, IDC_THROUGH ), TRUE );
-                    EnableWindow( GetDlgItem( hWnd, IDC_LASTKEY ), TRUE );
-                    return TRUE;
-                case IDC_SHOWALLKEYS: case IDC_SHOWSONGKEYS:
-                    EnableWindow( GetDlgItem( hWnd, IDC_FIRSTKEY ), FALSE );
-                    EnableWindow( GetDlgItem( hWnd, IDC_THROUGH ), FALSE );
-                    EnableWindow( GetDlgItem( hWnd, IDC_LASTKEY ), FALSE );
-                    return TRUE;
                 // Color buttons. Pop up color choose dialog and set color.
                 case IDC_COLOR1: case IDC_COLOR2: case IDC_COLOR3:
                 case IDC_COLOR4: case IDC_COLOR5: case IDC_COLOR6: 
-                case IDC_BKGCOLOR:
-                case IDC_BARCOLOR:
+                case IDC_COLOR7: case IDC_COLOR8: case IDC_COLOR9:
+                case IDC_COLOR10: case IDC_COLOR11: case IDC_COLOR12:
+                case IDC_COLOR13: case IDC_COLOR14: case IDC_COLOR15:
+                case IDC_COLOR16: case IDC_BKGCOLOR: case IDC_BARCOLOR:
                 {
                     static COLORREF acrCustClr[16] = { 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 
                                                        0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF }; 
@@ -164,15 +156,11 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 
                     // VisualSettings struct
                     bool bAlwaysShowControls = cVisual.bAlwaysShowControls;
-                    cVisual.eKeysShown = ( IsDlgButtonChecked( hWnd, IDC_SHOWALLKEYS ) == BST_CHECKED ? cVisual.All : 
-                                           IsDlgButtonChecked( hWnd, IDC_SHOWSONGKEYS ) == BST_CHECKED ? cVisual.Song :
-                                           IsDlgButtonChecked( hWnd, IDC_SHOWCUSTOMKEYS ) == BST_CHECKED ? cVisual.Custom :
-                                           cVisual.Song );
                     cVisual.bAlwaysShowControls = ( IsDlgButtonChecked( hWnd, IDC_SHOWCONTROLS ) == BST_CHECKED );
                     cVisual.bAssociateFiles = ( IsDlgButtonChecked( hWnd, IDC_ASSOCIATEFILES ) == BST_CHECKED );
                     cVisual.iFirstKey = (int)SendMessage( GetDlgItem( hWnd, IDC_FIRSTKEY ), CB_GETCURSEL, 0, 0 ) + MIDI::A0;
                     cVisual.iLastKey = (int)SendMessage( GetDlgItem( hWnd, IDC_LASTKEY ), CB_GETCURSEL, 0, 0 ) + MIDI::A0;
-                    for ( int i = 0; i < IDC_COLOR6 - IDC_COLOR1 + 1; i++ )
+                    for ( int i = 0; i < IDC_COLOR16 - IDC_COLOR1 + 1; i++ )
                         cVisual.colors[i] = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_COLOR1 + i ), GWLP_USERDATA );
                     cVisual.iBkgColor = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_BKGCOLOR ), GWLP_USERDATA );
                     cViz.iBarColor = (int)GetWindowLongPtr(GetDlgItem(hWnd, IDC_BARCOLOR), GWLP_USERDATA);
@@ -199,15 +187,13 @@ VOID SetVisualProc( HWND hWnd, const VisualSettings &cVisual, const VizSettings&
     HWND hWndLastKey = GetDlgItem( hWnd, IDC_LASTKEY );
 
     // Set values
-    CheckRadioButton( hWnd, IDC_SHOWALLKEYS, IDC_SHOWCUSTOMKEYS, IDC_SHOWALLKEYS + cVisual.eKeysShown );
     CheckDlgButton( hWnd, IDC_SHOWCONTROLS, cVisual.bAlwaysShowControls ? BST_CHECKED : BST_UNCHECKED );
     CheckDlgButton( hWnd, IDC_ASSOCIATEFILES, cVisual.bAssociateFiles ? BST_CHECKED : BST_UNCHECKED );
-    SendMessage( hWnd, WM_COMMAND, IDC_SHOWALLKEYS + cVisual.eKeysShown, 0 );
     SendMessage( hWndFirstKey, CB_SETCURSEL, cVisual.iFirstKey - MIDI::A0, 0 );
     SendMessage( hWndLastKey, CB_SETCURSEL, cVisual.iLastKey - MIDI::A0, 0 );
 
     // Colors
-    for ( int i = 0; i < IDC_COLOR6 - IDC_COLOR1 + 1; i++ )
+    for ( int i = 0; i < IDC_COLOR16 - IDC_COLOR1 + 1; i++ )
         SetWindowLongPtr( GetDlgItem( hWnd, IDC_COLOR1 + i ), GWLP_USERDATA, cVisual.colors[i] );
     SetWindowLongPtr( GetDlgItem( hWnd, IDC_BKGCOLOR ), GWLP_USERDATA, cVisual.iBkgColor );
     SetWindowLongPtr( GetDlgItem( hWnd, IDC_BARCOLOR ), GWLP_USERDATA, cViz.iBarColor );
