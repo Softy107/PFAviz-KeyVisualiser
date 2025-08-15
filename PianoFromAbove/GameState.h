@@ -259,11 +259,12 @@ private:
     bool m_bPaused; // Paused state
     Timer m_Timer; // Frame timers
     Timer m_RealTimer;
-    bool m_bMute;
+    bool m_bMute, m_bShowNC;
     bool m_bAnyChannelMuted;
     double m_dVolume;
     bool m_bTickMode = false;
-    long long llRendered;
+    long long llRendered, m_iNotesPlayed;
+    long long llMaxnps, llMaxplph; // Max stats
 
     // FPS variables
     bool m_bShowFPS;

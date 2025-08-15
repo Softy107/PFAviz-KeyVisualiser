@@ -638,7 +638,10 @@ void MainScreen::InitState()
     m_dFPS = 0.0;
     m_iFPSCount = 0;
     m_llFPSTime = 0;
+    m_iNotesPlayed = 0;
     m_dSpeed = -1.0; // Forces a speed reset upon first call to Logic
+    llMaxnps = 0;
+    llMaxplph = 0;
 
     m_fZoomX = cView.GetZoomX();
     m_fOffsetX = cView.GetOffsetX();
@@ -646,6 +649,7 @@ void MainScreen::InitState()
     m_bPaused = true;
     m_bMute = cPlayback.GetMute();
     double dNSpeed = cPlayback.GetNSpeed();
+    m_bShowNC = cViz.bNerdStats;
     m_llTimeSpan = static_cast< long long >( 3.0 * dNSpeed * 1000000 );
 
     // m_Timer will be initialized *later*
@@ -1120,6 +1124,7 @@ GameState::GameError MainScreen::Logic( void )
                 m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(),
                     static_cast<int>(pEvent->GetParam2() * dVolumeCorrect + 0.5));
                 notes_played++;
+                m_iNotesPlayed++;
             }
             if ((pEvent->GetChannelEventType() == MIDIChannelEvent::NoteOn || pEvent->GetChannelEventType() == MIDIChannelEvent::NoteOff)
                 && pEvent->GetParam1() < 128 && pEvent->HasSister())
@@ -1145,6 +1150,27 @@ GameState::GameError MainScreen::Logic( void )
                 for (const auto& work : m_vThreadWork[key])
                     UpdateState(key, work);
             });
+        }
+
+        // Recalculate NC in case user changed config
+        if (m_bShowNC != cViz.bNerdStats) { // Has the value changed?
+            m_bShowNC = cViz.bNerdStats; // Reassign the value
+            if (m_bShowNC == true) { // Was the value set to true?
+                m_iNotesPlayed = 0;
+                for (std::vector<MIDIChannelEvent*>::iterator it = m_vEvents.begin(); it != m_vEvents.end(); ++it) // Recalculate Note Counter
+                {
+                    MIDIChannelEvent* pEvent = *it;
+                    if (pEvent->GetAbsMicroSec() >= m_llStartTime)
+                        break;
+
+                    // Check if the event is a NoteOn
+                    MIDIChannelEvent* pChannelEvent = dynamic_cast<MIDIChannelEvent*>(pEvent);
+                    if (pEvent->GetChannelEventType() == MIDIChannelEvent::NoteOn)
+                    {
+                        m_iNotesPlayed++;
+                    }
+                }
+            }
         }
         
         // Update NPS
@@ -1313,6 +1339,21 @@ void MainScreen::JumpTo(long long llStartTime, bool bUpdateGUI)
         static PlaybackSettings& cPlayback = Config::GetConfig().GetPlaybackSettings();
         long long llNewPos = ((m_llStartTime - llFirstTime) * 1000) / (llLastTime - llFirstTime);
         cPlayback.SetPosition(static_cast<int>(llNewPos));
+    }
+
+    m_iNotesPlayed = 0;
+    for (std::vector<MIDIChannelEvent*>::iterator it = m_vEvents.begin(); it != m_vEvents.end(); ++it) // Recalculate Note Counter
+    {
+        MIDIChannelEvent* pEvent = *it;
+        if (pEvent->GetAbsMicroSec() >= m_llStartTime)
+            break;
+
+        // Check if the event is a NoteOn
+        MIDIChannelEvent* pChannelEvent = dynamic_cast<MIDIChannelEvent*>(pEvent);
+        if (pEvent->GetChannelEventType() == MIDIChannelEvent::NoteOn)
+        {
+            m_iNotesPlayed++;
+        }
     }
 }
 
@@ -1799,7 +1840,7 @@ void MainScreen::RenderText()
     if (m_bShowFPS && !m_bDumpFrames)
         iLines++;
     if (viz.bNerdStats)
-        iLines += 2;
+        iLines += 3;
     if (m_Timer.m_bManualTimer && !m_bDumpFrames)
         iLines++;
 
@@ -1870,7 +1911,7 @@ void MainScreen::RenderStatus(int lines)
         m_llStartTime >= 0 ? "" : "-",
         min, sec, cs,
         tmin, tsec, tcs);
-    float width = max(156 * viz.fUIScale, ImGui::CalcTextSize("Time:").x + ImGui::CalcTextSize(time_buf).x + 24.0f * viz.fUIScale);
+    float width = max(250 * viz.fUIScale, ImGui::CalcTextSize("Time:").x + ImGui::CalcTextSize(time_buf).x + 24.0f * viz.fUIScale);
     int cur_line = 0;
     m_pRenderer->GetDrawList()->AddRectFilled(
         ImVec2(m_pRenderer->GetBufferWidth() - width, 0.0f),
@@ -1890,9 +1931,14 @@ void MainScreen::RenderStatus(int lines)
         long long nps = 0;
         for (size_t i = 0; i < m_dNPSNotes.size(); i++)
             nps += std::get<1>(m_dNPSNotes[i]);
+        if (nps > llMaxnps)
+            llMaxnps = nps;
+        if (llRendered > llMaxplph)
+            llMaxplph = llRendered;
 
-        RenderStatusLine(cur_line++, width, "NPS:", "%ws", format_commas(nps).c_str());
-        RenderStatusLine(cur_line++, width, "Rendered:", "%ws", format_commas(llRendered).c_str());
+        RenderStatusLine(cur_line++, width, "Note Count:", "%ws / %ws", format_commas(m_iNotesPlayed).c_str(), format_commas(mInfo.iNoteCount).c_str());
+        RenderStatusLine(cur_line++, width, "NPS:", "%ws / %ws", format_commas(nps).c_str(), format_commas(llMaxplph).c_str());
+        RenderStatusLine(cur_line++, width, "Polyphony:", "%ws / %ws", format_commas(llRendered).c_str(), format_commas(llMaxplph).c_str());
     }
 }
 
