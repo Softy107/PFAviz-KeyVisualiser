@@ -218,7 +218,6 @@ private:
     void RenderNote(const MIDIChannelEvent* pNote);
     void GenNoteXTable();
     float GetNoteX( int iNote );
-    void RenderKeys();
     void RenderBorder();
     void RenderText();
     void RenderStatusLine(int line, float width, const char* left, const char* format, ...);
@@ -264,6 +263,7 @@ private:
     bool m_bAnyChannelMuted;
     double m_dVolume;
     bool m_bTickMode = false;
+    long long llRendered;
 
     // FPS variables
     bool m_bShowFPS;

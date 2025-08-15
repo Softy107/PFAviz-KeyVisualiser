@@ -1685,6 +1685,7 @@ void MainScreen::RenderNotes()
 
     // Ensure that any rects rendered after this point render over the notes
     m_pRenderer->SplitRect();
+    llRendered = 0;
 
     for (auto i = m_iEndPos; i >= m_iStartPos; i--) {
         MIDIChannelEvent* pEvent = m_vEvents[i];
@@ -1736,6 +1737,7 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
     // No longer use PushNoteData()
     if (m_llStartTime >= llNoteStart && m_llStartTime <= llNoteEnd) {
         m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
+        llRendered++;
     }
 }
 
@@ -1835,6 +1837,14 @@ void MainScreen::RenderStatusLine(int line, float width, const char* left, const
     va_end(varargs);
 }
 
+static std::wstring format_commas(long long num)
+{
+    std::wstring num_fmt = std::to_wstring(num);
+    for (int i = num_fmt.length() - 3; i > 0; i -= 3)
+        num_fmt.insert(i, L" ");
+    return num_fmt;
+}
+
 void MainScreen::RenderStatus(int lines)
 {
     // Time
@@ -1878,8 +1888,8 @@ void MainScreen::RenderStatus(int lines)
         for (size_t i = 0; i < m_dNPSNotes.size(); i++)
             nps += std::get<1>(m_dNPSNotes[i]);
 
-        RenderStatusLine(cur_line++, width, "NPS:", "%lld", nps);
-        RenderStatusLine(cur_line++, width, "Rendered:", "%llu", m_pRenderer->GetRenderedNotesCount());
+        RenderStatusLine(cur_line++, width, "NPS:", "%ws", format_commas(nps).c_str());
+        RenderStatusLine(cur_line++, width, "Rendered:", "%ws", format_commas(llRendered).c_str());
     }
 }
 
