@@ -1599,10 +1599,7 @@ GameState::GameError MainScreen::Render()
     }
 
     m_pRenderer->ClearAndBeginScene( 0x00000000 );
-    RenderLines();
     RenderNotes();
-    if ( m_bShowKB )
-        RenderKeys();
     RenderBorder();
     RenderText();
 
@@ -1680,91 +1677,6 @@ void MainScreen::RenderGlobals()
     GenNoteXTable();
 }
 
-void MainScreen::RenderLines()
-{
-    if (m_bBackgroundLoaded)
-        return;
-
-    m_pRenderer->DrawRect( m_fNotesX, m_fNotesY, m_fNotesCX, m_fNotesCY, m_csBackground.iPrimaryRGB );
-
-    // Vertical lines
-    for ( int i = m_iStartNote + 1; i <= m_iEndNote; i++ )
-        if ( !MIDI::IsSharp( i - 1 ) && !MIDI::IsSharp( i ) )
-        {
-            int iWhiteKeys = MIDI::WhiteCount( m_iStartNote, i );
-            float fStartX = MIDI::IsSharp( m_iStartNote ) * SharpRatio / 2.0f;
-            float x = m_fNotesX + m_fWhiteCX * ( iWhiteKeys + fStartX );
-            x = floor( x + 0.5f ); // Needs to be rounded because of the gradient
-            m_pRenderer->DrawRect( x - 1.0f, m_fNotesY, 3.0f, m_fNotesCY,
-                m_csBackground.iDarkRGB, m_csBackground.iVeryDarkRGB, m_csBackground.iVeryDarkRGB, m_csBackground.iDarkRGB );
-        }
-
-    // Horizontal (Hard!)
-    int iDivision = m_MIDI.GetInfo().iDivision;
-    // fuck this lmao
-    if ( !( iDivision & 0x8000 ) )
-    {
-        // Copy time state vars
-        int iCurrTick = m_iStartTick - 1;
-        long long llEndTime = (m_bTickMode ? m_iStartTick : m_llStartTime) + m_llTimeSpan;
-
-        // Copy tempo state vars
-        uint32_t iLastTempoTick = m_iLastTempoTick;
-        uint32_t iMicroSecsPerBeat = m_iMicroSecsPerBeat;
-        long long llLastTempoTime = m_llLastTempoTime;
-        eventvec_t::const_iterator itNextTempo = m_itNextTempo;
-
-        // Copy signature state vars
-        int iLastSignatureTick = m_iLastSignatureTick;
-        int iBeatsPerMeasure = m_iBeatsPerMeasure;
-        int iBeatType = m_iBeatType;
-        eventvec_t::const_iterator itNextSignature = m_itNextSignature;
-
-        // Compute initial next beat tick and next beat time
-        long long llNextBeatTime = 0;
-        int iNextBeatTick = 0;
-        do
-        {
-            iNextBeatTick = GetBeatTick( iCurrTick + 1, iBeatType, iLastSignatureTick );
-
-            // Next beat crosses the next tempo event. handle the event and recalculate next beat time
-            while ( itNextTempo != m_vTempo.end() && m_vMetaEvents[itNextTempo->second]->GetDataLen() == 3 &&
-                    iNextBeatTick > m_vMetaEvents[itNextTempo->second]->GetAbsT() )
-            {
-                MIDIMetaEvent *pEvent = m_vMetaEvents[itNextTempo->second];
-                MIDI::Parse24Bit( pEvent->GetData(), 3, &iMicroSecsPerBeat );
-                iLastTempoTick = pEvent->GetAbsT();
-                llLastTempoTime = pEvent->GetAbsMicroSec();
-                ++itNextTempo;
-            }
-            while ( itNextSignature != m_vSignature.end() && m_vMetaEvents[itNextSignature->second]->GetDataLen() == 4 &&
-                    iNextBeatTick > m_vMetaEvents[itNextSignature->second]->GetAbsT() )
-            {
-                MIDIMetaEvent *pEvent = m_vMetaEvents[itNextSignature->second];
-                iBeatsPerMeasure = pEvent->GetData()[0];
-                iBeatType = 1 << pEvent->GetData()[1];
-                iLastSignatureTick = pEvent->GetAbsT();
-                iNextBeatTick = GetBeatTick( iLastSignatureTick + 1, iBeatType, iLastSignatureTick );
-                ++itNextSignature;
-            }
-
-            // Finally render the beat or measure
-            int iNextBeat = GetBeat( iNextBeatTick, iBeatType, iLastSignatureTick );
-            bool bIsMeasure = !( ( iNextBeat < 0 ? -iNextBeat : iNextBeat ) % iBeatsPerMeasure );
-            llNextBeatTime = GetTickTime( iNextBeatTick, iLastTempoTick, llLastTempoTime, iMicroSecsPerBeat ); 
-            float y = m_fNotesY + m_fNotesCY * ( 1.0f - ( (float)(m_bTickMode ? iNextBeatTick : llNextBeatTime) - m_llRndStartTime) / m_llTimeSpan );
-            y = floor( y + 0.5f );
-            if ( bIsMeasure && y + 1.0f > m_fNotesY )
-                m_pRenderer->DrawRect( m_fNotesX, y - 1.0f, m_fNotesCX, 3.0f,
-                    m_csBackground.iDarkRGB, m_csBackground.iDarkRGB, m_csBackground.iVeryDarkRGB, m_csBackground.iVeryDarkRGB );
-
-            iCurrTick = iNextBeatTick;
-        }
-        while ((m_bTickMode ? iNextBeatTick : llNextBeatTime) <= llEndTime );
-        // hopefully no race condition?
-    }
-}
-
 void MainScreen::RenderNotes()
 {
     // Do we have any notes to render?
@@ -1798,6 +1710,9 @@ void MainScreen::RenderNotes()
 
 void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
 {
+    Config& config = Config::GetConfig();
+    VizSettings viz = config.GetVizSettings();
+
     int iNote = pNote->GetParam1();
     int iTrack = pNote->GetTrack();
     int iChannel = pNote->GetChannel();
@@ -1807,22 +1722,21 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
         llNoteStart = pNote->GetAbsT();
         llNoteEnd = pNote->GetSister(m_vEvents)->GetAbsT();
     }
+    // Note positon and size
+    float x = (m_pRenderer->GetBufferWidth() / 128.0f) * iNote;
+    if (viz.bVisualizePitchBends)
+        x = x + (m_pBends[iChannel]);
+    float y = (m_pRenderer->GetBufferHeight() / 16.0f) * (iChannel % 16);
+    float cy = (m_pRenderer->GetBufferHeight() / 16.0f);
 
-    // If a note is taking up the whole column, we can reasonably assume nothing behind it is visible
-    /*
-    if (llNoteStart < m_llRndStartTime && llNoteEnd > m_llRndStartTime + m_llTimeSpan)
-        m_aSkipRender[iNote / 64] |= (1uLL << (iNote & 63));
-    */
+    ChannelSettings& csTrack = m_vTrackSettings[iTrack].aChannels[iChannel];
+    if (m_vTrackSettings[iTrack].aChannels[iChannel].bHidden) return;
 
-    m_pRenderer->PushNoteData(
-        NoteData{
-            .key = (uint8_t)iNote,
-            .channel = (uint8_t)iChannel,
-            .track = (uint16_t)iTrack,
-            .pos = static_cast<float>(llNoteStart - m_llRndStartTime),
-            .length = static_cast<float>(llNoteEnd - llNoteStart),
-        }
-    );
+    // Only render a playing note
+    // No longer use PushNoteData()
+    if (m_llStartTime >= llNoteStart && m_llStartTime <= llNoteEnd) {
+        m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
+    }
 }
 
 void MainScreen::GenNoteXTable() {
@@ -1843,182 +1757,6 @@ void MainScreen::GenNoteXTable() {
 
 float MainScreen::GetNoteX(int iNote) {
     return notex_table[iNote];
-}
-
-void MainScreen::RenderKeys()
-{
-    // Screen info
-    float fKeysY = m_fNotesY + m_fNotesCY;
-    float fKeysCY = m_pRenderer->GetBufferHeight() - m_fNotesCY;
-
-    float fTransitionPct = .02f;
-    float fTransitionCY = max( 3.0f, floor( fKeysCY * fTransitionPct + 0.5f ) );
-    float fRedPct = .05f;
-    float fRedCY = floor( fKeysCY * fRedPct + 0.5f );
-    float fSpacerCY = 2.0f;
-    float fTopCY = floor( ( fKeysCY - fSpacerCY - fRedCY - fTransitionCY ) * 0.95f + 0.5f );
-    float fNearCY = fKeysCY - fSpacerCY - fRedCY - fTransitionCY - fTopCY;
-
-    // Draw the background
-    if (m_bBackgroundLoaded) {
-        auto dark = 0x80000000;
-        auto very_dark = 0x00000000;
-        m_pRenderer->DrawRect(m_fNotesX, fKeysY + fTransitionCY, m_fNotesCX, fKeysCY, very_dark);
-        m_pRenderer->DrawRect(m_fNotesX, fKeysY, m_fNotesCX, fTransitionCY,
-            0xFF000000, 0xFF000000, very_dark, very_dark);
-        m_pRenderer->DrawRect(m_fNotesX, fKeysY + fTransitionCY, m_fNotesCX, fRedCY,
-            m_csKBRed.iDarkRGB, m_csKBRed.iDarkRGB, m_csKBRed.iPrimaryRGB, m_csKBRed.iPrimaryRGB);
-        m_pRenderer->DrawRect(m_fNotesX, fKeysY + fTransitionCY + fRedCY, m_fNotesCX, fSpacerCY, dark);
-    } else {
-        m_pRenderer->DrawRect(m_fNotesX, fKeysY, m_fNotesCX, fKeysCY, m_csKBBackground.iVeryDarkRGB);
-        m_pRenderer->DrawRect(m_fNotesX, fKeysY, m_fNotesCX, fTransitionCY,
-            m_csBackground.iPrimaryRGB, m_csBackground.iPrimaryRGB, m_csKBBackground.iVeryDarkRGB, m_csKBBackground.iVeryDarkRGB);
-        m_pRenderer->DrawRect(m_fNotesX, fKeysY + fTransitionCY, m_fNotesCX, fRedCY,
-            m_csKBRed.iDarkRGB, m_csKBRed.iDarkRGB, m_csKBRed.iPrimaryRGB, m_csKBRed.iPrimaryRGB);
-        m_pRenderer->DrawRect(m_fNotesX, fKeysY + fTransitionCY + fRedCY, m_fNotesCX, fSpacerCY,
-            m_csKBBackground.iDarkRGB, m_csKBBackground.iDarkRGB, m_csKBBackground.iDarkRGB, m_csKBBackground.iDarkRGB);
-    }
-
-    // Keys info
-    float fKeyGap = max( 1.0f, floor( m_fWhiteCX * 0.05f + 0.5f ) );
-    float fKeyGap1 = fKeyGap - floor( fKeyGap / 2.0f + 0.5f );
-
-    int iStartRender = ( MIDI::IsSharp( m_iStartNote ) ? m_iStartNote - 1 : m_iStartNote );
-    int iEndRender = ( MIDI::IsSharp( m_iEndNote ) ? m_iEndNote + 1 : m_iEndNote );
-    float fStartX = ( MIDI::IsSharp( m_iStartNote ) ? m_fWhiteCX * ( SharpRatio / 2.0f - 1.0f ) : 0.0f );
-    float fSharpCY = fTopCY * 0.67f;
-
-    // Draw the white keys
-    float fCurX = m_fNotesX + fStartX;
-    float fCurY = fKeysY + fTransitionCY + fRedCY + fSpacerCY;
-    for ( int i = iStartRender; i <= iEndRender; i++ )
-        if ( !MIDI::IsSharp( i ) )
-        {
-            if ( m_pNoteState[i] == -1 )
-            {
-                m_pRenderer->DrawRect( fCurX + fKeyGap1 , fCurY, m_fWhiteCX - fKeyGap, fTopCY + fNearCY,
-                    m_csKBWhite.iDarkRGB, m_csKBWhite.iDarkRGB, m_csKBWhite.iPrimaryRGB, m_csKBWhite.iPrimaryRGB );
-                m_pRenderer->DrawRect( fCurX + fKeyGap1 , fCurY + fTopCY, m_fWhiteCX - fKeyGap, fNearCY,
-                    m_csKBWhite.iDarkRGB, m_csKBWhite.iDarkRGB, m_csKBWhite.iVeryDarkRGB, m_csKBWhite.iVeryDarkRGB );
-                m_pRenderer->DrawRect( fCurX + fKeyGap1, fCurY + fTopCY, m_fWhiteCX - fKeyGap, 2.0f,
-                    m_csKBBackground.iDarkRGB, m_csKBBackground.iDarkRGB, m_csKBWhite.iVeryDarkRGB, m_csKBWhite.iVeryDarkRGB );
-
-                if ( i == MIDI::C4 )
-                {
-                    float fMXGap = floor( m_fWhiteCX * 0.25f + 0.5f );
-                    float fMCX = m_fWhiteCX - fMXGap * 2.0f - fKeyGap;
-                    float fMY = max( fCurY + fTopCY - fMCX - 5.0f, fCurY + fSharpCY + 5.0f );
-                    m_pRenderer->DrawRect( fCurX + fKeyGap1 + fMXGap, fMY, fMCX, fCurY + fTopCY - 5.0f - fMY, m_csKBWhite.iDarkRGB );
-                }
-            }
-            else
-            {
-                const MIDIChannelEvent *pEvent = ( m_pNoteState[i] >= 0 ? m_vEvents[m_pNoteState[i]] : NULL );
-                const int iTrack = pEvent->GetTrack() % MaxTrackColors;
-                const int iChannel = pEvent->GetChannel();
-
-                ChannelSettings &csKBWhite = m_vTrackSettings[iTrack].aChannels[iChannel];
-                m_pRenderer->DrawRect( fCurX + fKeyGap1 , fCurY, m_fWhiteCX - fKeyGap, fTopCY + fNearCY - 2.0f,
-                    csKBWhite.iDarkRGB, csKBWhite.iDarkRGB, csKBWhite.iPrimaryRGB, csKBWhite.iPrimaryRGB );
-                m_pRenderer->DrawRect( fCurX + fKeyGap1 , fCurY + fTopCY + fNearCY - 2.0f, m_fWhiteCX - fKeyGap, 2.0f, csKBWhite.iDarkRGB );
-
-                if ( i == MIDI::C4 )
-                {
-                    float fMXGap = floor( m_fWhiteCX * 0.25f + 0.5f );
-                    float fMCX = m_fWhiteCX - fMXGap * 2.0f - fKeyGap;
-                    float fMY = max( fCurY + fTopCY + fNearCY - fMCX - 7.0f, fCurY + fSharpCY + 5.0f );
-                    m_pRenderer->DrawRect( fCurX + fKeyGap1 + fMXGap, fMY, fMCX, fCurY + fTopCY + fNearCY - 7.0f - fMY, csKBWhite.iDarkRGB );
-                }
-            }
-            m_pRenderer->DrawRect( floor( fCurX + fKeyGap1 + m_fWhiteCX - fKeyGap + 0.5f ), fCurY, fKeyGap, fTopCY + fNearCY,
-                m_csKBBackground.iVeryDarkRGB, m_csKBBackground.iPrimaryRGB, m_csKBBackground.iPrimaryRGB, m_csKBBackground.iVeryDarkRGB );
-
-            fCurX += m_fWhiteCX;
-        }
-
-    // Draw the sharps
-    iStartRender = ( m_iStartNote != MIDI::A0 && !MIDI::IsSharp( m_iStartNote ) && m_iStartNote > 0 && MIDI::IsSharp( m_iStartNote - 1 ) ? m_iStartNote - 1 : m_iStartNote );
-    iEndRender = ( m_iEndNote != MIDI::C8 && !MIDI::IsSharp( m_iEndNote ) && m_iEndNote < 127 && MIDI::IsSharp( m_iEndNote + 1 ) ? m_iEndNote + 1 : m_iEndNote );
-    fStartX = ( MIDI::IsSharp( m_iStartNote ) ? m_fWhiteCX * SharpRatio / 2.0f : 0.0f );
-
-    float fSharpTop = SharpRatio * 0.7f;
-    fCurX = m_fNotesX + fStartX;
-    fCurY = fKeysY + fTransitionCY + fRedCY + fSpacerCY;
-    for ( int i = iStartRender; i <= iEndRender; i++ )
-        if ( !MIDI::IsSharp( i ) )
-            fCurX += m_fWhiteCX;
-        else
-        {
-            float fNudgeX = 0.0;
-            MIDI::Note eNote = MIDI::NoteVal( i );
-            if ( eNote == MIDI::CS || eNote == MIDI::FS ) fNudgeX = -SharpRatio / 5.0f;
-            else if ( eNote == MIDI::AS || eNote == MIDI::DS ) fNudgeX = SharpRatio / 5.0f;
-
-            const float cx = m_fWhiteCX * SharpRatio;
-            const float x = fCurX - m_fWhiteCX * ( SharpRatio / 2.0f - fNudgeX );
-            const float fSharpTopX1 = x + m_fWhiteCX * ( SharpRatio - fSharpTop ) / 2.0f;
-            const float fSharpTopX2 = fSharpTopX1 + m_fWhiteCX * fSharpTop;
-
-            if ( m_pNoteState[i] == -1 )
-            {
-                m_pRenderer->DrawSkew( fSharpTopX1, fCurY + fSharpCY - fNearCY,
-                                       fSharpTopX2, fCurY + fSharpCY - fNearCY,
-                                       x + cx, fCurY + fSharpCY, x, fCurY + fSharpCY,
-                                       m_csKBSharp.iPrimaryRGB, m_csKBSharp.iPrimaryRGB, m_csKBSharp.iVeryDarkRGB, m_csKBSharp.iVeryDarkRGB );
-                m_pRenderer->DrawSkew( fSharpTopX1, fCurY - fNearCY,
-                                       fSharpTopX1, fCurY + fSharpCY - fNearCY,
-                                       x, fCurY + fSharpCY, x, fCurY,
-                                       m_csKBSharp.iPrimaryRGB, m_csKBSharp.iPrimaryRGB, m_csKBSharp.iVeryDarkRGB, m_csKBSharp.iVeryDarkRGB );
-                m_pRenderer->DrawSkew( fSharpTopX2, fCurY + fSharpCY - fNearCY,
-                                       fSharpTopX2, fCurY - fNearCY,
-                                       x + cx, fCurY, x + cx, fCurY + fSharpCY,
-                                       m_csKBSharp.iPrimaryRGB, m_csKBSharp.iPrimaryRGB, m_csKBSharp.iVeryDarkRGB, m_csKBSharp.iVeryDarkRGB );
-                m_pRenderer->DrawRect( fSharpTopX1, fCurY - fNearCY, fSharpTopX2 - fSharpTopX1, fSharpCY, m_csKBSharp.iVeryDarkRGB );
-                m_pRenderer->DrawSkew( fSharpTopX1, fCurY - fNearCY,
-                                       fSharpTopX2, fCurY - fNearCY,
-                                       fSharpTopX2, fCurY - fNearCY + fSharpCY * 0.45f,
-                                       fSharpTopX1, fCurY - fNearCY + fSharpCY * 0.35f,
-                                       m_csKBSharp.iDarkRGB, m_csKBSharp.iDarkRGB, m_csKBSharp.iPrimaryRGB, m_csKBSharp.iPrimaryRGB );
-                m_pRenderer->DrawSkew( fSharpTopX1, fCurY - fNearCY + fSharpCY * 0.35f,
-                                       fSharpTopX2, fCurY - fNearCY + fSharpCY * 0.45f,
-                                       fSharpTopX2, fCurY - fNearCY + fSharpCY * 0.65f,
-                                       fSharpTopX1, fCurY - fNearCY + fSharpCY * 0.55f,
-                                       m_csKBSharp.iPrimaryRGB, m_csKBSharp.iPrimaryRGB, m_csKBSharp.iVeryDarkRGB, m_csKBSharp.iVeryDarkRGB );
-            }
-            else
-            {
-                const MIDIChannelEvent *pEvent = ( m_pNoteState[i] >= 0 ? m_vEvents[m_pNoteState[i]] : NULL );
-                const int iTrack = pEvent->GetTrack() % MaxTrackColors;
-                const int iChannel = pEvent->GetChannel();
-
-                const float fNewNear = fNearCY * 0.25f;
-
-                const ChannelSettings &csKBSharp = m_vTrackSettings[iTrack].aChannels[iChannel];
-                m_pRenderer->DrawSkew( fSharpTopX1, fCurY + fSharpCY - fNewNear,
-                                       fSharpTopX2, fCurY + fSharpCY - fNewNear,
-                                       x + cx, fCurY + fSharpCY, x, fCurY + fSharpCY,
-                                       csKBSharp.iPrimaryRGB, csKBSharp.iPrimaryRGB, csKBSharp.iDarkRGB, csKBSharp.iDarkRGB );
-                m_pRenderer->DrawSkew( fSharpTopX1, fCurY - fNewNear,
-                                       fSharpTopX1, fCurY + fSharpCY - fNewNear,
-                                       x, fCurY + fSharpCY, x, fCurY,
-                                       csKBSharp.iPrimaryRGB, csKBSharp.iPrimaryRGB, csKBSharp.iDarkRGB, csKBSharp.iDarkRGB );
-                m_pRenderer->DrawSkew( fSharpTopX2, fCurY + fSharpCY - fNewNear,
-                                       fSharpTopX2, fCurY - fNewNear,
-                                       x + cx, fCurY, x + cx, fCurY + fSharpCY,
-                                       csKBSharp.iPrimaryRGB, csKBSharp.iPrimaryRGB, csKBSharp.iDarkRGB, csKBSharp.iDarkRGB );
-                m_pRenderer->DrawRect( fSharpTopX1, fCurY - fNewNear, fSharpTopX2 - fSharpTopX1, fSharpCY, csKBSharp.iDarkRGB );
-                m_pRenderer->DrawSkew( fSharpTopX1, fCurY - fNewNear,
-                                       fSharpTopX2, fCurY - fNewNear,
-                                       fSharpTopX2, fCurY - fNewNear + fSharpCY * 0.35f,
-                                       fSharpTopX1, fCurY - fNewNear + fSharpCY * 0.25f,
-                                       csKBSharp.iPrimaryRGB, csKBSharp.iPrimaryRGB, csKBSharp.iPrimaryRGB, csKBSharp.iPrimaryRGB );
-                m_pRenderer->DrawSkew( fSharpTopX1, fCurY - fNewNear + fSharpCY * 0.25f,
-                                       fSharpTopX2, fCurY - fNewNear + fSharpCY * 0.35f,
-                                       fSharpTopX2, fCurY - fNewNear + fSharpCY * 0.75f,
-                                       fSharpTopX1, fCurY - fNewNear + fSharpCY * 0.65f,
-                                       csKBSharp.iPrimaryRGB, csKBSharp.iPrimaryRGB, csKBSharp.iDarkRGB, csKBSharp.iDarkRGB );
-            }
-        }
 }
 
 void MainScreen::RenderBorder()
