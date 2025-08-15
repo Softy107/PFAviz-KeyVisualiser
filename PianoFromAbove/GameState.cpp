@@ -1599,6 +1599,9 @@ GameState::GameError MainScreen::Render()
     }
 
     m_pRenderer->ClearAndBeginScene( 0x00000000 );
+    //Render Background
+    m_pRenderer->DrawRect(m_fNotesX, m_fNotesY, m_pRenderer->GetBufferWidth(), m_pRenderer->GetBufferHeight(), m_csBackground.iPrimaryRGB);
+
     RenderNotes();
     RenderBorder();
     RenderText();
