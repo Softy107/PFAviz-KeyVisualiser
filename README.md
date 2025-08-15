@@ -1,13 +1,14 @@
-# PianoFromAbove
+# PFAviz : KeyVisualiser
 
-Welcome to my viz branch. This includes all the changes of upstream's viz branch, but with other hacky tweaks included!
-
-This is currently (much) faster than upstream viz.
+Welcome to this PFAviz branch. 
+This mod alteres the base visualiser from PFA and changes it to look like the KeyVisualiser skin for UMP.
+It also contains more customization that upstream PFAviz, and customization for the visualiser it self.
+I could not find a download or the creator of the original skin, once I do I will credit them here
 
 ## How to build
 
 * Clone this repo
-* Download and install Visual Studio 2019
+* Download and install Visual Studio 2019 or newer
   * Make sure to install the Clang compiler and tools, too
 * Download and install Direct X SDK
 * Retarget project to your installed Windows SDK version
