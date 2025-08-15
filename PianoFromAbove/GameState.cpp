@@ -298,10 +298,6 @@ GameState::GameError SplashScreen::Logic()
     m_bPaused = bPaused;
     m_dVolume = cPlayback.GetVolume();
 
-    double dMaxCorrect = ( mInfo.iMaxVolume > 0 ? 127.0 / mInfo.iMaxVolume : 1.0 );
-    double dVolumeCorrect = ( mInfo.iVolumeSum > 0 ? ( m_dVolume * 127.0 * mInfo.iNoteCount ) / mInfo.iVolumeSum : 1.0 );
-    dVolumeCorrect = min( dVolumeCorrect, dMaxCorrect );
-
     // Time stuff
     long long llMaxTime = m_MIDI.GetInfo().llTotalMicroSecs + 500000;
     long long llElapsed = m_Timer.GetMicroSecs();
@@ -334,7 +330,7 @@ GameState::GameError SplashScreen::Logic()
             m_OutDevice.PlayEvent( pEvent->GetEventCode(), pEvent->GetParam1(), pEvent->GetParam2() );
         else if ( !m_bMute && !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted )
             m_OutDevice.PlayEvent( pEvent->GetEventCode(), pEvent->GetParam1(),
-                                    static_cast< int >( pEvent->GetParam2() * dVolumeCorrect + 0.5 ) );
+                                    static_cast< int >( pEvent->GetParam2() * m_dVolume + 0.5 ) );
         UpdateState( m_iStartPos );
         m_iStartPos++;
     }
@@ -1039,10 +1035,6 @@ GameState::GameError MainScreen::Logic( void )
         m_pRenderer->SetLimitFPS( cVideo.bLimitFPS );
     if ( cVisual.iBkgColor != m_csBackground.iOrigBGR ) m_csBackground.SetColor( cVisual.iBkgColor, 0.7f, 1.3f );
 
-    double dMaxCorrect = ( mInfo.iMaxVolume > 0 ? 127.0 / mInfo.iMaxVolume : 1.0 );
-    double dVolumeCorrect = ( mInfo.iVolumeSum > 0 ? ( m_dVolume * 127.0 * mInfo.iNoteCount ) / mInfo.iVolumeSum : 1.0 );
-    dVolumeCorrect = min( dVolumeCorrect, dMaxCorrect );
-
     m_bAnyChannelMuted = false;
     for (auto& track : m_vTrackSettings) {
         for (auto& chan : track.aChannels) {
@@ -1122,7 +1114,7 @@ GameState::GameError MainScreen::Logic( void )
             }
             else if (!m_bMute && (!m_bAnyChannelMuted || !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted)) {
                 m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(),
-                    static_cast<int>(pEvent->GetParam2() * dVolumeCorrect + 0.5));
+                    static_cast<int>(pEvent->GetParam2() * m_dVolume + 0.5));
                 notes_played++;
                 m_iNotesPlayed++;
             }
