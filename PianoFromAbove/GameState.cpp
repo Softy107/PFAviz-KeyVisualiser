@@ -1757,7 +1757,6 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
         llNoteEnd = pNote->GetSister(m_vEvents)->GetAbsT();
     }
 
-    const MIDI::MIDIInfo& mInfo = m_MIDI.GetInfo();
     const vector< MIDITrack* >& vTracks = m_MIDI.GetTracks();
     ChannelSettings& csTrack = m_vTrackSettings[iTrack].aChannels[iChannel];
     if (m_vTrackSettings[iTrack].aChannels[iChannel].bHidden) return;
