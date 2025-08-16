@@ -1750,6 +1750,7 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
     int iNote = pNote->GetParam1();
     int iTrack = pNote->GetTrack();
     int iChannel = pNote->GetChannel();
+    float fVelocity = (pNote->GetParam2()/127.0f);
     long long llNoteStart = pNote->GetAbsMicroSec();
     long long llNoteEnd = llNoteStart + pNote->GetLength();
     if (m_bTickMode) {
@@ -1779,6 +1780,10 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
             y = (m_pRenderer->GetBufferHeight() / 16.0f) * ((iTrack - 1) % 16);
             cy = (m_pRenderer->GetBufferHeight() / 16.0f);
         }
+    }
+    if (cKey.bVelocitySize) {
+        cy = cy * fVelocity;
+        y = y + ((m_pRenderer->GetBufferHeight() / 16.0f) - cy);
     }
 
     // Only render a playing note

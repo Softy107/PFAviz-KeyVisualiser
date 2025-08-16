@@ -609,6 +609,7 @@ INT_PTR WINAPI KeyVisProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             cKey.iStyle = (int)SendMessage(GetDlgItem(hWnd, IDC_STYLE), CB_GETCURSEL, 0, 0) + 1;
             cKey.bPerTrack = (IsDlgButtonChecked(hWnd, IDC_PERTRACK) == BST_CHECKED);
             cKey.bTrackLines = (IsDlgButtonChecked(hWnd, IDC_TRACKLINES) == BST_CHECKED);
+            cKey.bVelocitySize = (IsDlgButtonChecked(hWnd, IDC_VELOCITYTOSIZE) == BST_CHECKED);
 
             // Report success and return
             config.SetKeyVisSettings(cKey);
@@ -633,6 +634,7 @@ VOID SetKeyVisProc(HWND hWnd, const KeyVisSettings& cKey)
     // Set values
     CheckDlgButton(hWnd, IDC_PERTRACK, cKey.bPerTrack ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hWnd, IDC_TRACKLINES, cKey.bTrackLines ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hWnd, IDC_VELOCITYTOSIZE, cKey.bVelocitySize ? BST_CHECKED : BST_UNCHECKED);
     SendMessage(hWndStyle, CB_SETCURSEL, cKey.iStyle - 1, 0);
 
 }

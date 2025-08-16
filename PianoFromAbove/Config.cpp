@@ -255,6 +255,7 @@ void KeyVisSettings::LoadDefaultValues() {
     this->iStyle = 1;
     this->bPerTrack = false;
     this->bTrackLines = false;
+    this->bVelocitySize = false;
 }
 
 void AudioSettings::LoadMIDIDevices()
@@ -473,6 +474,8 @@ void KeyVisSettings::LoadConfigValues(TiXmlElement* txRoot) {
         this->bPerTrack = (iAttrVal != 0);
     if (txKey->QueryIntAttribute("TrackLines", &iAttrVal) == TIXML_SUCCESS)
         this->bTrackLines = (iAttrVal != 0);
+    if (txKey->QueryIntAttribute("VelocityToSize", &iAttrVal) == TIXML_SUCCESS)
+        this->bVelocitySize = (iAttrVal != 0);
     txKey->QueryIntAttribute("Style", &this->iStyle);
 }
 
@@ -619,6 +622,7 @@ bool KeyVisSettings::SaveConfigValues(TiXmlElement* txRoot) {
 
     txKey->SetAttribute("PerTrack", this->bPerTrack);
     txKey->SetAttribute("TrackLines", this->bTrackLines);
+    txKey->SetAttribute("VelocityToSize", this->bVelocitySize);
     txKey->SetAttribute("Style", this->iStyle);
 
     return true;

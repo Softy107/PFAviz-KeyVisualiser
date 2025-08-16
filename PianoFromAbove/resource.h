@@ -62,6 +62,7 @@
 #define IDC_GDI                         1033
 #define IDC_DISPLAYFPS                  1034
 #define IDC_LIMITFPS                    1035
+#define IDC_VELOCITYTOSIZE				1036
 #define IDC_ADDFILE                     1044
 #define IDC_ADDFOLDER                   1045
 #define IDC_REMOVE                      1046
