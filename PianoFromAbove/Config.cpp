@@ -84,6 +84,17 @@ void Config::LoadConfigValues()
         return;
 
     m_VizSettings.LoadConfigValues(txRoot);
+
+    // Another file, yippee!
+    doc = TiXmlDocument(sPath + "\\pfaviz-KeyVis.xml");
+    if (!doc.LoadFile())
+        return;
+
+    txRoot = doc.FirstChildElement();
+    if (!txRoot)
+        return;
+
+    m_KeyVisSettings.LoadConfigValues(txRoot);
 }
 
 void Config::LoadConfigValues( TiXmlElement *txRoot )
@@ -125,7 +136,15 @@ bool Config::SaveConfigValues()
 
     m_VizSettings.SaveConfigValues(txRoot);
 
-    return bStockRet && doc.SaveFile(sPath + "\\pfavizkhang.xml");
+    doc = TiXmlDocument();
+    decl = new TiXmlDeclaration("1.0", "", "");
+    doc.LinkEndChild(decl);
+    txRoot = new TiXmlElement(APPNAMENOSPACES);
+    doc.LinkEndChild(txRoot);
+
+    m_KeyVisSettings.SaveConfigValues(txRoot);
+
+    return bStockRet && doc.SaveFile(sPath + "\\pfavizkhang.xml") && doc.SaveFile(sPath + "\\pfaviz-KeyVis.xml");
 }
 
 bool Config::SaveConfigValues( TiXmlElement *txRoot )
@@ -152,7 +171,6 @@ void VisualSettings::LoadDefaultValues()
     this->bAssociateFiles = false;
     this->iFirstKey = 0;
     this->iLastKey = 127;
-    this->iStyle = 1;
 
     iBkgColor = 0x00303030;
     int R, G, B = 0, S = 80, V = 100;
@@ -229,6 +247,12 @@ void VizSettings::LoadDefaultValues() {
     this->sUIFont = L"";
 }
 
+void KeyVisSettings::LoadDefaultValues() {
+    this->iStyle = 1;
+    this->bPerTrack = false;
+    this->bTrackLines = false;
+}
+
 void AudioSettings::LoadMIDIDevices()
 {
     wstring oldOutDev( this->iOutDevice >= 0 ? this->vMIDIOutDevices[this->iOutDevice] : L"" );
@@ -267,7 +291,6 @@ void VisualSettings::LoadConfigValues( TiXmlElement *txRoot )
         this->bAlwaysShowControls = ( iAttrVal != 0 );
     if ( txVisual->QueryIntAttribute( "AssociateFiles", &iAttrVal ) == TIXML_SUCCESS )
         this->bAssociateFiles = ( iAttrVal != 0 );
-    txVisual->QueryIntAttribute("Style", &this->iStyle);
 
     //Colors
     int r, g, b = 0;
@@ -436,6 +459,19 @@ void VizSettings::LoadConfigValues(TiXmlElement* txRoot) {
             iBarColor = ((r & 0xFF) << 0) | ((g & 0xFF) << 8) | ((b & 0xFF) << 16);
 }
 
+void KeyVisSettings::LoadConfigValues(TiXmlElement* txRoot) {
+    TiXmlElement* txKey = txRoot->FirstChildElement("KeyVis");
+    if (!txKey)
+        return;
+
+    int iAttrVal;
+    if (txKey->QueryIntAttribute("PerTrack", &iAttrVal) == TIXML_SUCCESS)
+        this->bPerTrack = (iAttrVal != 0);
+    if (txKey->QueryIntAttribute("TrackLines", &iAttrVal) == TIXML_SUCCESS)
+        this->bTrackLines = (iAttrVal != 0);
+    txKey->QueryIntAttribute("Style", &this->iStyle);
+}
+
 //-----------------------------------------------------------------------------
 // SaveConfigValues
 //-----------------------------------------------------------------------------
@@ -449,7 +485,6 @@ bool VisualSettings::SaveConfigValues( TiXmlElement *txRoot )
     txVisual->SetAttribute( "AssociateFiles", this->bAssociateFiles );
     txVisual->SetAttribute( "FirstKey", this->iFirstKey );
     txVisual->SetAttribute( "LastKey", this->iLastKey );
-    txVisual->SetAttribute( "Style" , this->iStyle);
 
     TiXmlElement *txColors = new TiXmlElement( "Colors" );
     txVisual->LinkEndChild( txColors );
@@ -571,6 +606,17 @@ bool VizSettings::SaveConfigValues(TiXmlElement* txRoot) {
     txBarColor->SetAttribute("R", (iBarColor >> 0) & 0xFF);
     txBarColor->SetAttribute("G", (iBarColor >> 8) & 0xFF);
     txBarColor->SetAttribute("B", (iBarColor >> 16) & 0xFF);
+    return true;
+}
+
+bool KeyVisSettings::SaveConfigValues(TiXmlElement* txRoot) {
+    TiXmlElement* txKey = new TiXmlElement("KeyVis");
+    txRoot->LinkEndChild(txKey);
+
+    txKey->SetAttribute("PerTrack", this->bPerTrack);
+    txKey->SetAttribute("TrackLines", this->bTrackLines);
+    txKey->SetAttribute("Style", this->iStyle);
+
     return true;
 }
 

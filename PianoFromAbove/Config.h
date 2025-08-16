@@ -47,7 +47,7 @@ struct VisualSettings : public ISettings
     bool SaveConfigValues( TiXmlElement *txRoot );
 
     enum KeysShown { All, Song, Custom } eKeysShown;
-    int iFirstKey, iLastKey, iStyle;
+    int iFirstKey, iLastKey;
     bool bAlwaysShowControls, bAssociateFiles;
     unsigned int colors[16], iBkgColor;
 };
@@ -207,6 +207,15 @@ struct VizSettings : public ISettings {
     std::wstring sUIFont;
 };
 
+struct KeyVisSettings : public ISettings {
+    void LoadDefaultValues();
+    void LoadConfigValues(TiXmlElement* txRoot);
+    bool SaveConfigValues(TiXmlElement* txRoot);
+
+    int iStyle;
+    bool bPerTrack, bTrackLines;
+};
+
 class Config : public ISettings
 {
 public:
@@ -230,12 +239,14 @@ public:
     PlaybackSettings& GetPlaybackSettings() { return m_PlaybackSettings; }
     ViewSettings& GetViewSettings() { return m_ViewSettings; }
     VizSettings& GetVizSettings() { return m_VizSettings; }
+    KeyVisSettings& GetKeyVisSettings() { return m_KeyVisSettings; }
 
     void SetVisualSettings(const VisualSettings &VisualSettings) { m_VisualSettings = VisualSettings; }
     void SetAudioSettings(const AudioSettings &audioSettings) { m_AudioSettings = audioSettings; }
     void SetVideoSettings(const VideoSettings &videoSettings) { m_VideoSettings = videoSettings; }
     void SetControlsSettings(const ControlsSettings &ControlsSettings) { m_ControlsSettings = ControlsSettings; }
     void SetVizSettings(const VizSettings& VizSettings) { m_VizSettings = VizSettings; }
+    void SetKeyVisSettings(const KeyVisSettings& KeyVisSettings) { m_KeyVisSettings = KeyVisSettings; };
 
     // i really need to start writting getters and setters
     bool m_bManualTimer = false;
@@ -256,4 +267,5 @@ private:
     PlaybackSettings m_PlaybackSettings;
     ViewSettings m_ViewSettings;
     VizSettings m_VizSettings;
+    KeyVisSettings m_KeyVisSettings;
 };

@@ -11,6 +11,7 @@
 #define IDD_PP3_VIDEO                   109
 #define IDD_PP5_LIBRARY                 110
 #define IDD_PP5_VIZ                     110
+#define IDD_PP6_KEYVIS					111
 #define IDB_MEDIAICONSSMALL             125
 #define IDR_HIDDENCMDS                  126
 #define IDD_TRACKSETTINGS               127

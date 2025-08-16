@@ -885,16 +885,12 @@ GameState::GameError MainScreen::MsgProc( HWND, UINT msg, WPARAM wParam, LPARAM 
                 case VK_UP:
                     if ( bAlt && !bCtrl )
                         cPlayback.SetVolume( min( cPlayback.GetVolume() + 0.1, 1.0 ), true );
-                    else if ( bShift && !bCtrl )
-                        cPlayback.SetNSpeed( cPlayback.GetNSpeed() * ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
                     else if ( !bAlt && !bShift )
                         cPlayback.SetSpeed( cPlayback.GetSpeed() / ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
                     return Success;
                 case VK_DOWN:
                     if ( bAlt && !bShift && !bCtrl )
                         cPlayback.SetVolume( max( cPlayback.GetVolume() - 0.1, 0.0 ), true );
-                    else if ( bShift && !bAlt && !bCtrl )
-                        cPlayback.SetNSpeed( cPlayback.GetNSpeed() / ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
                     else if ( !bAlt && !bShift )
                         cPlayback.SetSpeed( cPlayback.GetSpeed() * ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
                     return Success;
@@ -1749,7 +1745,7 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
 {
     Config& config = Config::GetConfig();
     VizSettings viz = config.GetVizSettings();
-    VisualSettings cVis = config.GetVisualSettings();
+    KeyVisSettings cKey = config.GetKeyVisSettings();
 
     int iNote = pNote->GetParam1();
     int iTrack = pNote->GetTrack();
@@ -1774,7 +1770,7 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
     // Only render a playing note
     // No longer use PushNoteData()
     if (m_llStartTime >= llNoteStart && m_llStartTime <= llNoteEnd) {
-        switch (cVis.iStyle)
+        switch (cKey.iStyle)
         {
         case 1:
             m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
@@ -1808,8 +1804,8 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
 }
 
 void MainScreen::GenNoteXTable() {
-    int min_key = min(max(0, m_iStartNote), 127);
-    int max_key = min(max(0, m_iEndNote), 127);
+    int min_key = 0;
+    int max_key = 127;
     for (int i = min_key; i <= max_key; i++) {
         int iWhiteKeys = MIDI::WhiteCount(m_iStartNote, i);
         float fStartX = (MIDI::IsSharp(m_iStartNote) - MIDI::IsSharp(i)) * SharpRatio / 2.0f;

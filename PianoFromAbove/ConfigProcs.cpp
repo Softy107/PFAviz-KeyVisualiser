@@ -22,9 +22,9 @@
 
 VOID DoPreferences( HWND hWndOwner )
 {
-    int pDialogs[] = { IDD_PP1_VISUAL, IDD_PP2_AUDIO, IDD_PP3_VIDEO, IDD_PP4_CONTROLS, IDD_PP5_VIZ };
-    DLGPROC pProcs[] = { VisualProc, AudioProc, VideoProc, ControlsProc, VizProc };
-    LPCWSTR pTitles[] = { TEXT( "Visual" ), TEXT( "Audio" ), TEXT("Video"), TEXT( "Controls" ), TEXT("Viz") };
+    int pDialogs[] = { IDD_PP1_VISUAL, IDD_PP6_KEYVIS, IDD_PP2_AUDIO, IDD_PP3_VIDEO, IDD_PP4_CONTROLS, IDD_PP5_VIZ };
+    DLGPROC pProcs[] = { VisualProc, KeyVisProc, AudioProc, VideoProc, ControlsProc, VizProc };
+    LPCWSTR pTitles[] = { TEXT( "Visual" ), TEXT("KeyVisualiser"), TEXT("Audio"), TEXT("Video"), TEXT("Controls"), TEXT("Viz")};
     PROPSHEETPAGE psp[sizeof(pDialogs) / sizeof(int)];
     PROPSHEETHEADER psh;
 
@@ -65,14 +65,6 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
     {
         case WM_INITDIALOG:
         {
-            HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
-
-            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Flat");
-            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Classic");
-            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Dark");
-            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Signal");
-            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Neon");
-
             // Config to fill out the form
             Config &config = Config::GetConfig();
             SetVisualProc( hWnd, config.GetVisualSettings(), config.GetVizSettings() );
@@ -160,7 +152,6 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
                         cVisual.colors[i] = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_COLOR1 + i ), GWLP_USERDATA );
                     cVisual.iBkgColor = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_BKGCOLOR ), GWLP_USERDATA );
                     cViz.iBarColor = (int)GetWindowLongPtr(GetDlgItem(hWnd, IDC_BARCOLOR), GWLP_USERDATA);
-                    cVisual.iStyle = (int)SendMessage(GetDlgItem(hWnd, IDC_STYLE), CB_GETCURSEL, 0, 0) + 1;
 
                     // Report success and return
                     config.SetVisualSettings( cVisual );
@@ -180,13 +171,10 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 // Sets the values in the playback settings dialog. Used at init and restoring defaults
 VOID SetVisualProc( HWND hWnd, const VisualSettings &cVisual, const VizSettings& cViz )
 {
-    HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
-
     // Set values
     CheckDlgButton( hWnd, IDC_SHOWCONTROLS, cVisual.bAlwaysShowControls ? BST_CHECKED : BST_UNCHECKED );
     CheckDlgButton( hWnd, IDC_ASSOCIATEFILES, cVisual.bAssociateFiles ? BST_CHECKED : BST_UNCHECKED );
     EnableWindow(GetDlgItem(hWnd, IDC_STYLE), TRUE);
-    SendMessage(hWndStyle, CB_SETCURSEL, cVisual.iStyle - 1, 0);
 
     // Colors
     for ( int i = 0; i < IDC_COLOR16 - IDC_COLOR1 + 1; i++ )
@@ -556,6 +544,84 @@ INT_PTR WINAPI VizProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     }
 
     return FALSE;
+}
+
+INT_PTR WINAPI KeyVisProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+    {
+        HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
+
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Flat");
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Classic");
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Dark");
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Signal");
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Neon");
+
+        // Config to fill out the form
+        Config& config = Config::GetConfig();
+        SetKeyVisProc(hWnd, config.GetKeyVisSettings());
+        return TRUE;
+    }
+    case WM_COMMAND:
+    {
+        int iId = LOWORD(wParam);
+        Changed(hWnd);
+        switch (iId)
+        {
+            case IDC_RESTOREDEFAULTS:
+            {
+                KeyVisSettings cKeyVisSettings;
+                cKeyVisSettings.LoadDefaultValues();
+
+                SendMessage(hWnd, WM_SETREDRAW, FALSE, 0);
+                SetKeyVisProc(hWnd, cKeyVisSettings);
+                SendMessage(hWnd, WM_SETREDRAW, TRUE, 0);
+                InvalidateRect(hWnd, NULL, FALSE);
+                return TRUE;
+            }
+        }
+        break;
+    }
+    case WM_NOTIFY:
+    {
+        LPNMHDR lpnmhdr = (LPNMHDR)lParam;
+        switch (lpnmhdr->code)
+        {
+            // OK or Apply button pressed
+        case PSN_APPLY:
+        {
+            // Get a copy of the config to overwrite the settings
+            Config& config = Config::GetConfig();
+            KeyVisSettings cKey = config.GetKeyVisSettings();
+
+            // KeyVisSettings struct
+            cKey.iStyle = (int)SendMessage(GetDlgItem(hWnd, IDC_STYLE), CB_GETCURSEL, 0, 0) + 1;
+
+            // Report success and return
+            config.SetKeyVisSettings(cKey);
+            SetWindowLongPtr(hWnd, DWLP_MSGRESULT, PSNRET_NOERROR);
+            return TRUE;
+        }
+        }
+        break;
+    }
+    }
+
+    return FALSE;
+}
+
+// Sets the values in the playback settings dialog. Used at init and restoring defaults
+VOID SetKeyVisProc(HWND hWnd, const KeyVisSettings& cKey)
+{
+    HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
+
+    // Set values
+    EnableWindow(GetDlgItem(hWnd, IDC_STYLE), TRUE);
+    SendMessage(hWndStyle, CB_SETCURSEL, cKey.iStyle - 1, 0);
+
 }
 
 BOOL ToggleYN( HWND hWndListview, int iItem )
