@@ -1,8 +1,13 @@
 # PFAviz : KeyVisualiser
 
 Welcome to this PFAviz branch. 
+
 This mod alteres the base visualiser from PFA and changes it to look like the KeyVisualiser skin for UMP.
 It also contains more customization that upstream PFAviz, and customization for the visualiser it self.
+
+I should also mention, that this PFAviz mod will not have the same performance as upstream.
+There are changes that make rendering both faster and slower(ie. removing keyboard but different note rendering.).
+
 I could not find a download or the creator of the original skin, once I do I will credit them here
 
 ## How to build
