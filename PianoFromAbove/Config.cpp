@@ -136,6 +136,8 @@ bool Config::SaveConfigValues()
 
     m_VizSettings.SaveConfigValues(txRoot);
 
+    bool bVizRet = doc.SaveFile(sPath + "\\pfavizkhang.xml");
+
     doc = TiXmlDocument();
     decl = new TiXmlDeclaration("1.0", "", "");
     doc.LinkEndChild(decl);
@@ -144,7 +146,9 @@ bool Config::SaveConfigValues()
 
     m_KeyVisSettings.SaveConfigValues(txRoot);
 
-    return bStockRet && doc.SaveFile(sPath + "\\pfavizkhang.xml") && doc.SaveFile(sPath + "\\pfaviz-KeyVis.xml");
+    bool bKeyVisRet = doc.SaveFile(sPath + "\\pfaviz-KeyVis.xml");
+
+    return bStockRet && bVizRet && bKeyVisRet;
 }
 
 bool Config::SaveConfigValues( TiXmlElement *txRoot )
