@@ -264,7 +264,7 @@ private:
     double m_dVolume;
     bool m_bTickMode = false;
     long long llRendered, m_iNotesPlayed;
-    long long llMaxnps, llMaxplph; // Max stats
+    long long llMaxnps, llMaxplph = 0; // Max stats
 
     // FPS variables
     bool m_bShowFPS;

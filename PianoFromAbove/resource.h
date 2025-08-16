@@ -46,6 +46,8 @@
 #define IDC_COLOR15                     1018
 #define IDC_COLOR16                     1019
 #define IDC_STYLE						1020
+#define IDC_PERTRACK					1021
+#define IDC_TRACKLINES					1022
 #define IDC_BKGCOLOR                    1023
 #define IDC_BARCOLOR                    1024
 #define IDC_LRARROWS                    1025

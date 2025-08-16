@@ -1756,7 +1756,13 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
         llNoteStart = pNote->GetAbsT();
         llNoteEnd = pNote->GetSister(m_vEvents)->GetAbsT();
     }
-    // Note positon and size
+
+    const MIDI::MIDIInfo& mInfo = m_MIDI.GetInfo();
+    const vector< MIDITrack* >& vTracks = m_MIDI.GetTracks();
+    ChannelSettings& csTrack = m_vTrackSettings[iTrack].aChannels[iChannel];
+    if (m_vTrackSettings[iTrack].aChannels[iChannel].bHidden) return;
+
+    // Default note positon and size
     float x = (m_pRenderer->GetBufferWidth() / 128.0f) * iNote;
     if (viz.bVisualizePitchBends)
         x = x + (m_pBends[iChannel]);
@@ -1764,8 +1770,17 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
     float cy = (m_pRenderer->GetBufferHeight() / 16.0f);
     float fDeflate = m_fWhiteCX * 0.15f / 2.0f;
 
-    ChannelSettings& csTrack = m_vTrackSettings[iTrack].aChannels[iChannel];
-    if (m_vTrackSettings[iTrack].aChannels[iChannel].bHidden) return;
+    // Settings calculation
+    if (cKey.bPerTrack) {
+        if (cKey.bTrackLines) {
+            cy = (m_pRenderer->GetBufferHeight() / vTracks.size()); // divide height by actual number of tracks
+            y = cy * (iTrack - 1);
+        }
+        else {
+            y = (m_pRenderer->GetBufferHeight() / 16.0f) * ((iTrack - 1) % 16);
+            cy = (m_pRenderer->GetBufferHeight() / 16.0f);
+        }
+    }
 
     // Only render a playing note
     // No longer use PushNoteData()

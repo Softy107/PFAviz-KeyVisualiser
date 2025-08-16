@@ -571,6 +571,14 @@ INT_PTR WINAPI KeyVisProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         Changed(hWnd);
         switch (iId)
         {
+            case IDC_PERTRACK:
+            {
+                if (IsDlgButtonChecked(hWnd, IDC_PERTRACK) == BST_CHECKED)
+                    EnableWindow(GetDlgItem(hWnd, IDC_TRACKLINES), TRUE);
+                else
+                    EnableWindow(GetDlgItem(hWnd, IDC_TRACKLINES), FALSE);
+                return TRUE;
+            }
             case IDC_RESTOREDEFAULTS:
             {
                 KeyVisSettings cKeyVisSettings;
@@ -599,6 +607,8 @@ INT_PTR WINAPI KeyVisProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             // KeyVisSettings struct
             cKey.iStyle = (int)SendMessage(GetDlgItem(hWnd, IDC_STYLE), CB_GETCURSEL, 0, 0) + 1;
+            cKey.bPerTrack = (IsDlgButtonChecked(hWnd, IDC_PERTRACK) == BST_CHECKED);
+            cKey.bTrackLines = (IsDlgButtonChecked(hWnd, IDC_TRACKLINES) == BST_CHECKED);
 
             // Report success and return
             config.SetKeyVisSettings(cKey);
@@ -618,8 +628,11 @@ VOID SetKeyVisProc(HWND hWnd, const KeyVisSettings& cKey)
 {
     HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
 
-    // Set values
     EnableWindow(GetDlgItem(hWnd, IDC_STYLE), TRUE);
+    EnableWindow(GetDlgItem(hWnd, IDC_TRACKLINES), cKey.bPerTrack ? TRUE : FALSE);
+    // Set values
+    CheckDlgButton(hWnd, IDC_PERTRACK, cKey.bPerTrack ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hWnd, IDC_TRACKLINES, cKey.bTrackLines ? BST_CHECKED : BST_UNCHECKED);
     SendMessage(hWndStyle, CB_SETCURSEL, cKey.iStyle - 1, 0);
 
 }
