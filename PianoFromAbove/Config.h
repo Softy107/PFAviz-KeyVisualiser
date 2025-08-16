@@ -47,7 +47,7 @@ struct VisualSettings : public ISettings
     bool SaveConfigValues( TiXmlElement *txRoot );
 
     enum KeysShown { All, Song, Custom } eKeysShown;
-    int iFirstKey, iLastKey;
+    int iFirstKey, iLastKey, iStyle;
     bool bAlwaysShowControls, bAssociateFiles;
     unsigned int colors[16], iBkgColor;
 };

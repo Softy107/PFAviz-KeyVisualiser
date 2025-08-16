@@ -152,6 +152,7 @@ void VisualSettings::LoadDefaultValues()
     this->bAssociateFiles = false;
     this->iFirstKey = 0;
     this->iLastKey = 127;
+    this->iStyle = 1;
 
     iBkgColor = 0x00303030;
     int R, G, B = 0, S = 80, V = 100;
@@ -266,6 +267,7 @@ void VisualSettings::LoadConfigValues( TiXmlElement *txRoot )
         this->bAlwaysShowControls = ( iAttrVal != 0 );
     if ( txVisual->QueryIntAttribute( "AssociateFiles", &iAttrVal ) == TIXML_SUCCESS )
         this->bAssociateFiles = ( iAttrVal != 0 );
+    txVisual->QueryIntAttribute("Style", &this->iStyle);
 
     //Colors
     int r, g, b = 0;
@@ -447,6 +449,7 @@ bool VisualSettings::SaveConfigValues( TiXmlElement *txRoot )
     txVisual->SetAttribute( "AssociateFiles", this->bAssociateFiles );
     txVisual->SetAttribute( "FirstKey", this->iFirstKey );
     txVisual->SetAttribute( "LastKey", this->iLastKey );
+    txVisual->SetAttribute( "Style" , this->iStyle);
 
     TiXmlElement *txColors = new TiXmlElement( "Colors" );
     txVisual->LinkEndChild( txColors );

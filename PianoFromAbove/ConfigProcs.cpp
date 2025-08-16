@@ -65,15 +65,13 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
     {
         case WM_INITDIALOG:
         {
-            HWND hWndFirstKey = GetDlgItem( hWnd, IDC_FIRSTKEY );
-            HWND hWndLastKey = GetDlgItem( hWnd, IDC_LASTKEY );
+            HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
 
-            // Enumerate the keys
-            for ( int i = MIDI::A0; i <= MIDI::C8; i++ )
-            {
-                SendMessage( hWndFirstKey, CB_ADDSTRING, i, ( LPARAM )MIDI::NoteName(i).c_str() );
-                SendMessage( hWndLastKey, CB_ADDSTRING, i, ( LPARAM )MIDI::NoteName(i).c_str() );
-            }
+            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Flat");
+            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Classic");
+            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Dark");
+            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Signal");
+            SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Neon");
 
             // Config to fill out the form
             Config &config = Config::GetConfig();
@@ -158,12 +156,11 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
                     bool bAlwaysShowControls = cVisual.bAlwaysShowControls;
                     cVisual.bAlwaysShowControls = ( IsDlgButtonChecked( hWnd, IDC_SHOWCONTROLS ) == BST_CHECKED );
                     cVisual.bAssociateFiles = ( IsDlgButtonChecked( hWnd, IDC_ASSOCIATEFILES ) == BST_CHECKED );
-                    cVisual.iFirstKey = (int)SendMessage( GetDlgItem( hWnd, IDC_FIRSTKEY ), CB_GETCURSEL, 0, 0 ) + MIDI::A0;
-                    cVisual.iLastKey = (int)SendMessage( GetDlgItem( hWnd, IDC_LASTKEY ), CB_GETCURSEL, 0, 0 ) + MIDI::A0;
                     for ( int i = 0; i < IDC_COLOR16 - IDC_COLOR1 + 1; i++ )
                         cVisual.colors[i] = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_COLOR1 + i ), GWLP_USERDATA );
                     cVisual.iBkgColor = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_BKGCOLOR ), GWLP_USERDATA );
                     cViz.iBarColor = (int)GetWindowLongPtr(GetDlgItem(hWnd, IDC_BARCOLOR), GWLP_USERDATA);
+                    cVisual.iStyle = (int)SendMessage(GetDlgItem(hWnd, IDC_STYLE), CB_GETCURSEL, 0, 0) + 1;
 
                     // Report success and return
                     config.SetVisualSettings( cVisual );
@@ -183,14 +180,13 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 // Sets the values in the playback settings dialog. Used at init and restoring defaults
 VOID SetVisualProc( HWND hWnd, const VisualSettings &cVisual, const VizSettings& cViz )
 {
-    HWND hWndFirstKey = GetDlgItem( hWnd, IDC_FIRSTKEY );
-    HWND hWndLastKey = GetDlgItem( hWnd, IDC_LASTKEY );
+    HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
 
     // Set values
     CheckDlgButton( hWnd, IDC_SHOWCONTROLS, cVisual.bAlwaysShowControls ? BST_CHECKED : BST_UNCHECKED );
     CheckDlgButton( hWnd, IDC_ASSOCIATEFILES, cVisual.bAssociateFiles ? BST_CHECKED : BST_UNCHECKED );
-    SendMessage( hWndFirstKey, CB_SETCURSEL, cVisual.iFirstKey - MIDI::A0, 0 );
-    SendMessage( hWndLastKey, CB_SETCURSEL, cVisual.iLastKey - MIDI::A0, 0 );
+    EnableWindow(GetDlgItem(hWnd, IDC_STYLE), TRUE);
+    SendMessage(hWndStyle, CB_SETCURSEL, cVisual.iStyle - 1, 0);
 
     // Colors
     for ( int i = 0; i < IDC_COLOR16 - IDC_COLOR1 + 1; i++ )

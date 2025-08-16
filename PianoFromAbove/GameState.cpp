@@ -1749,6 +1749,7 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
 {
     Config& config = Config::GetConfig();
     VizSettings viz = config.GetVizSettings();
+    VisualSettings cVis = config.GetVisualSettings();
 
     int iNote = pNote->GetParam1();
     int iTrack = pNote->GetTrack();
@@ -1765,6 +1766,7 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
         x = x + (m_pBends[iChannel]);
     float y = (m_pRenderer->GetBufferHeight() / 16.0f) * (iChannel % 16);
     float cy = (m_pRenderer->GetBufferHeight() / 16.0f);
+    float fDeflate = m_fWhiteCX * 0.15f / 2.0f;
 
     ChannelSettings& csTrack = m_vTrackSettings[iTrack].aChannels[iChannel];
     if (m_vTrackSettings[iTrack].aChannels[iChannel].bHidden) return;
@@ -1772,7 +1774,35 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
     // Only render a playing note
     // No longer use PushNoteData()
     if (m_llStartTime >= llNoteStart && m_llStartTime <= llNoteEnd) {
-        m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
+        switch (cVis.iStyle)
+        {
+        case 1:
+            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
+            break;
+        case 2:
+            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iVeryDarkRGB);
+            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, (m_fWhiteCX * SharpRatio) - 2 * fDeflate, cy - 2 * fDeflate,
+                csTrack.iPrimaryRGB, csTrack.iDarkRGB, csTrack.iDarkRGB, csTrack.iPrimaryRGB);
+            break;
+        case 3:
+            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy,
+                csTrack.iDarkRGB, csTrack.iDarkRGB, csTrack.iVeryDarkRGB, csTrack.iVeryDarkRGB);
+            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, (m_fWhiteCX * SharpRatio) - 2 * fDeflate, cy - 2 * fDeflate,
+                csTrack.iPrimaryRGB, csTrack.iPrimaryRGB, csTrack.iDarkRGB, csTrack.iDarkRGB);
+            break;
+        case 4:
+            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
+            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, (m_fWhiteCX * SharpRatio) - 2 * fDeflate, cy - 2 * fDeflate, csTrack.iDarkRGB);
+            break;
+        case 5:
+            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
+            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, (m_fWhiteCX * SharpRatio) - 2 * fDeflate, cy - 2 * fDeflate, 0);
+            break;
+        default: // Else (a secret style)
+            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB, csTrack.iDarkRGB, csTrack.iVeryDarkRGB, csTrack.iDarkRGB);
+            break;
+        }
+        
         llRendered++;
     }
 }
