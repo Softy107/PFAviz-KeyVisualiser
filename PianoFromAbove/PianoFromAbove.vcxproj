@@ -107,7 +107,7 @@
     <LibraryPath>$(ProjectDir)lzma\lib;$(ProjectDir)freetype\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)\$(Configuration)\</OutDir>
     <IntDir>$(Configuration)\$(Platform)\</IntDir>
-    <TargetName>PFAviz-KeyVisualiser-x86_64</TargetName>
+    <TargetName>Debug Do Not Use</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -127,7 +127,7 @@
     <LibraryPath>$(ProjectDir)lzma\lib;$(ProjectDir)freetype\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)\$(Configuration)\</OutDir>
     <IntDir>$(Configuration)\$(Platform)\</IntDir>
-    <TargetName>PFA-1.1.0viz-AVX2</TargetName>
+    <TargetName>PFAviz-KeyVisualiser-AVX2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseSSE|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -135,7 +135,7 @@
     <LibraryPath>$(ProjectDir)lzma\lib;$(ProjectDir)freetype\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)\$(Configuration)\</OutDir>
     <IntDir>$(Configuration)\$(Platform)\</IntDir>
-    <TargetName>PFA-1.1.0viz-SSE42</TargetName>
+    <TargetName>PFAviz-KeyVisualiser-SSE42</TargetName>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgEnabled>false</VcpkgEnabled>
