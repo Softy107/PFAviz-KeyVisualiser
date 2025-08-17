@@ -285,7 +285,6 @@ GameState::GameError SplashScreen::Logic()
 
     static Config &config = Config::GetConfig();
     static PlaybackSettings &cPlayback = config.GetPlaybackSettings();
-    const MIDI::MIDIInfo &mInfo = m_MIDI.GetInfo();
 
     // Detect changes in state
     bool bPaused = cPlayback.GetPaused();
@@ -992,7 +991,6 @@ GameState::GameError MainScreen::Logic( void )
     static const VisualSettings &cVisual = config.GetVisualSettings();
     static const VideoSettings &cVideo = config.GetVideoSettings();
     static const VizSettings &cViz = config.GetVizSettings();
-    const MIDI::MIDIInfo &mInfo = m_MIDI.GetInfo();
 
     // people are probably going to yell at me if you can't change the bar color during playback
     m_csKBRed.SetColor(cViz.iBarColor, 0.5f);
@@ -1007,11 +1005,10 @@ GameState::GameError MainScreen::Logic( void )
     bool bMuteChanged = ( bMute != m_bMute );
     
     // Set the state
-    m_bTickMode = cViz.bTickBased;
     m_bPaused = bPaused;
     m_dSpeed = dSpeed;
     m_bMute = bMute;
-    m_llTimeSpan = m_bTickMode ? dNSpeed * 3000 : llTimeSpan;
+    m_llTimeSpan = llTimeSpan;
     m_dVolume = cPlayback.GetVolume();
     m_bShowKB = cView.GetKeyboard();
     m_bZoomMove = cView.GetZoomMove();
@@ -1071,23 +1068,14 @@ GameState::GameError MainScreen::Logic( void )
     if ( !m_bPaused && m_llStartTime < llMaxTime )
         m_llStartTime = llNextStartTime;
     m_iStartTick = GetCurrentTick( m_llStartTime );
-    long long llEndTime = 0;
-    if (m_bTickMode)
-        llEndTime = m_iStartTick + m_llTimeSpan;
-    else
-        llEndTime = m_llStartTime + m_llTimeSpan;
+    long long llEndTime = m_llStartTime + m_llTimeSpan;
 
     RenderGlobals();
 
     // Advance end position
     auto iEventCount = (int64_t)m_vEvents.size();
-    if (m_bTickMode) {
-        while (m_iEndPos + 1 < iEventCount && m_vEvents[m_iEndPos + 1]->GetAbsT() < llEndTime)
-            m_iEndPos++;
-    } else {
-        while (m_iEndPos + 1 < iEventCount && m_vEvents[m_iEndPos + 1]->GetAbsMicroSec() < llEndTime)
-            m_iEndPos++;
-    }
+    while (m_iEndPos + 1 < iEventCount && m_vEvents[m_iEndPos + 1]->GetAbsMicroSec() < llEndTime)
+        m_iEndPos++;
 
     // Only want to advance start positions when unpaused becuase advancing startpos "consumes" the events
     if ( !m_bPaused )
@@ -1152,7 +1140,6 @@ GameState::GameError MainScreen::Logic( void )
                         break;
 
                     // Check if the event is a NoteOn
-                    MIDIChannelEvent* pChannelEvent = dynamic_cast<MIDIChannelEvent*>(pEvent);
                     if (pEvent->GetChannelEventType() == MIDIChannelEvent::NoteOn)
                     {
                         m_iNotesPlayed++;
@@ -1337,7 +1324,6 @@ void MainScreen::JumpTo(long long llStartTime, bool bUpdateGUI)
             break;
 
         // Check if the event is a NoteOn
-        MIDIChannelEvent* pChannelEvent = dynamic_cast<MIDIChannelEvent*>(pEvent);
         if (pEvent->GetChannelEventType() == MIDIChannelEvent::NoteOn)
         {
             m_iNotesPlayed++;
@@ -1632,7 +1618,6 @@ GameState::GameError MainScreen::Render()
     m_pRenderer->DrawRect(m_fNotesX, m_fNotesY, m_pRenderer->GetBufferWidth(), m_pRenderer->GetBufferHeight(), m_csBackground.iPrimaryRGB);
 
     RenderNotes();
-    RenderBorder();
     RenderText();
 
     // Present the backbuffer contents to the display
@@ -1662,16 +1647,6 @@ void MainScreen::RenderGlobals()
 {
     // Midi info
     const MIDI::MIDIInfo &mInfo = m_MIDI.GetInfo();
-    if ( m_eKeysShown == VisualSettings::All )
-    {
-        m_iStartNote = 0;
-        m_iEndNote = 127;
-    }
-    else if ( m_eKeysShown == VisualSettings::Song )
-    {
-        m_iStartNote = mInfo.iMinNote;
-        m_iEndNote = mInfo.iMaxNote;
-    }
 
     // Screen X info
     m_fNotesX = m_fOffsetX + m_fTempOffsetX;
@@ -1697,13 +1672,9 @@ void MainScreen::RenderGlobals()
     }
 
     // Round down start time. This is only used for rendering purposes
-    if (m_bTickMode) {
-        m_llRndStartTime = m_iStartTick;
-    } else {
-        long long llMicroSecsPP = static_cast< long long >( m_llTimeSpan / m_fNotesCY + 0.5f );
-        m_llRndStartTime = m_llStartTime - ( m_llStartTime < 0 ? llMicroSecsPP : 0 );
-        m_llRndStartTime = (m_llRndStartTime / llMicroSecsPP ) * llMicroSecsPP;
-    }
+    long long llMicroSecsPP = static_cast< long long >( m_llTimeSpan / m_fNotesCY + 0.5f );
+    m_llRndStartTime = m_llStartTime - ( m_llStartTime < 0 ? llMicroSecsPP : 0 );
+    m_llRndStartTime = (m_llRndStartTime / llMicroSecsPP ) * llMicroSecsPP;
     memset(m_aSkipRender, 0, sizeof(m_aSkipRender));
 
     GenNoteXTable();
@@ -1753,10 +1724,6 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
     float fVelocity = (pNote->GetParam2()/127.0f);
     long long llNoteStart = pNote->GetAbsMicroSec();
     long long llNoteEnd = llNoteStart + pNote->GetLength();
-    if (m_bTickMode) {
-        llNoteStart = pNote->GetAbsT();
-        llNoteEnd = pNote->GetSister(m_vEvents)->GetAbsT();
-    }
 
     const vector< MIDITrack* >& vTracks = m_MIDI.GetTracks();
     ChannelSettings& csTrack = m_vTrackSettings[iTrack].aChannels[iChannel];
@@ -1840,32 +1807,6 @@ void MainScreen::GenNoteXTable() {
 
 float MainScreen::GetNoteX(int iNote) {
     return notex_table[iNote];
-}
-
-void MainScreen::RenderBorder()
-{
-    // Top, bottom, left, right
-    const unsigned iBlack = 0x00000000;
-    float fBufferCY = static_cast< float >( m_pRenderer->GetBufferHeight() );
-    m_pRenderer->DrawRect( m_fNotesX - 50.0f, m_fNotesY - 50.0f, m_fNotesCX + 100.0f, 50.0f, iBlack );
-    m_pRenderer->DrawRect( m_fNotesX - 50.0f, m_fNotesY + fBufferCY, m_fNotesCX + 100.0f, 50.0f, iBlack );
-    m_pRenderer->DrawRect( m_fNotesX - m_fWhiteCX, m_fNotesY - 50.0f, m_fWhiteCX, fBufferCY + 100.0f, iBlack );
-    m_pRenderer->DrawRect( m_fNotesX + m_fNotesCX, m_fNotesY - 50.0f, m_fWhiteCX, fBufferCY + 100.0f, iBlack );
-
-    const float fPad = 10.0f;
-    const unsigned iBkg = m_csBackground.iPrimaryRGB;
-    m_pRenderer->DrawSkew( m_fNotesX, m_fNotesY + fBufferCY, m_fNotesX + m_fNotesCX, m_fNotesY + fBufferCY,
-                           m_fNotesX + m_fNotesCX + fPad, m_fNotesY + fBufferCY + fPad, m_fNotesX - fPad, m_fNotesY + fBufferCY + fPad,
-                           iBkg, iBkg, iBlack, iBlack );
-    m_pRenderer->DrawSkew( m_fNotesX - fPad, m_fNotesY - fPad, m_fNotesX + m_fNotesCX + fPad, m_fNotesY - fPad,
-                           m_fNotesX + m_fNotesCX, m_fNotesY, m_fNotesX, m_fNotesY,
-                           iBlack, iBlack, iBkg, iBkg );
-    m_pRenderer->DrawSkew( m_fNotesX - fPad, m_fNotesY - fPad, m_fNotesX, m_fNotesY,
-                           m_fNotesX, m_fNotesY + fBufferCY, m_fNotesX - fPad, m_fNotesY + fBufferCY + fPad,
-                           iBlack, iBkg, iBkg, iBlack );
-    m_pRenderer->DrawSkew( m_fNotesX + m_fNotesCX, m_fNotesY, m_fNotesX + m_fNotesCX + fPad, m_fNotesY - fPad,
-                           m_fNotesX + m_fNotesCX + fPad, m_fNotesY + fBufferCY + fPad, m_fNotesX + m_fNotesCX, m_fNotesY + fBufferCY,
-                           iBkg, iBlack, iBlack, iBkg );
 }
 
 void MainScreen::RenderText()

@@ -213,12 +213,10 @@ private:
 
     // Rendering
     void RenderGlobals();
-    void RenderLines();
     void RenderNotes();
     void RenderNote(const MIDIChannelEvent* pNote);
     void GenNoteXTable();
     float GetNoteX( int iNote );
-    void RenderBorder();
     void RenderText();
     void RenderStatusLine(int line, float width, const char* left, const char* format, ...);
     void RenderStatus(int lines);
