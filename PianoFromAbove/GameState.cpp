@@ -1098,9 +1098,9 @@ GameState::GameError MainScreen::Logic( void )
                     m_pBends[pEvent->GetChannel()] = (notex_table[1] - notex_table[0]) * (((short)(((pEvent->GetParam2() << 7) | pEvent->GetParam1()) - 8192)) / (8192.0f / 12.0f));
                 m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(), pEvent->GetParam2());
             }
-            else if (!m_bMute && (!m_bAnyChannelMuted || !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted) && pEvent->GetParam2() > cKey.iMinVelocity) {
-                m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(),
-                    static_cast<int>(pEvent->GetParam2() * m_dVolume + 0.5));
+            else if (!m_bMute && (!m_bAnyChannelMuted || !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted)) {
+                if (pEvent->GetParam2() > cKey.iMinVelocity) // If this was in the if statement above, NPS a Note counter wouldn't count correctly
+                    m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(), static_cast<int>(pEvent->GetParam2() * m_dVolume + 0.5));
                 notes_played++;
                 m_iNotesPlayed++;
             }
@@ -1915,6 +1915,11 @@ void MainScreen::RenderStatus(int lines)
             llMaxnps = nps;
         if (llRendered > llMaxplph)
             llMaxplph = llRendered;
+
+        if (m_llStartTime <= 0) {
+            llMaxnps = 0;
+            llMaxplph = 0;
+        }
 
         RenderStatusLine(cur_line++, width, "Note Count:", "%ws / %ws", format_commas(m_iNotesPlayed).c_str(), format_commas(mInfo.iNoteCount).c_str());
         RenderStatusLine(cur_line++, width, "NPS:", "%ws / %ws", format_commas(nps).c_str(), format_commas(llMaxplph).c_str());

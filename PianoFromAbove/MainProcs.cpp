@@ -124,7 +124,7 @@ LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
                     cPlayback.SetPlayMode( GameState::Intro, true );
                     cPlayback.SetPlayable( false, true );
                     cPlayback.SetPosition( 0 );
-                    SetWindowText( g_hWnd, L"pfavizkhang-dx12 " __DATE__ );
+                    SetWindowText( g_hWnd, L"PFAviz-KeyVisualiser " );
                     HandOffMsg( WM_COMMAND, ID_CHANGESTATE, ( LPARAM )new IntroScreen( NULL, NULL ) );
                     return 0;
                 }
@@ -1161,10 +1161,14 @@ BOOL PlayFile( const wstring &sFile, bool bCustomSettings )
 
     const GameState::State ePlayMode = GameState::Practice;
 
+    //set loading window name
+    size_t pos = sFile.find_last_of(L"\\/");
+    std::wstring WinName = (pos == std::wstring::npos) ? sFile : sFile.substr(pos + 1);
+
     // Try loading the file
     MainScreen* pGameState = NULL;
     g_LoadingProgress.stage = MIDILoadingProgress::Stage::CopyToMem;
-    g_LoadingProgress.name = sFile;
+    g_LoadingProgress.name = WinName;
     g_LoadingProgress.progress = 0;
     g_LoadingProgress.max = 1;
     auto thread = std::thread([&]() {
@@ -1201,7 +1205,10 @@ BOOL PlayFile( const wstring &sFile, bool bCustomSettings )
     cPlayback.SetPaused( ePlayMode != GameState::Practice, true );
     cPlayback.SetPosition( 0 );
     cView.SetZoomMove( false, true );
-    SetWindowText( g_hWnd, sFile.c_str() + ( sFile.find_last_of( L'\\' ) + 1 ) );
+    // Set window title
+    std::wstring filename = sFile.substr(sFile.find_last_of(L'\\') + 1);
+    std::wstring title = L"PFAviz - " + filename;
+    SetWindowText(g_hWnd, title.c_str());
 
     // Switch game state
     HandOffMsg( WM_COMMAND, ID_CHANGESTATE, ( LPARAM )pGameState );
