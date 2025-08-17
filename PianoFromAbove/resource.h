@@ -64,6 +64,7 @@
 #define IDC_LIMITFPS                    1035
 #define IDC_VELOCITYTOSIZE				1036
 #define IDC_MINVELOCITY					1037
+#define IDC_SAMEWIDTH					1038
 #define IDC_ADDFILE                     1044
 #define IDC_ADDFOLDER                   1045
 #define IDC_REMOVE                      1046

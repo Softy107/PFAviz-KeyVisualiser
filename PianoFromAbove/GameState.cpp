@@ -1692,22 +1692,43 @@ void MainScreen::RenderNotes()
     m_pRenderer->SplitRect();
     llRendered = 0;
 
+    // Render notes. Regular notes then sharps to  make sure they're not hidden
+    bool bHasSharp = false;
     for (auto i = m_iEndPos; i >= m_iStartPos; i--) {
         MIDIChannelEvent* pEvent = m_vEvents[i];
         if (pEvent->GetChannelEventType() == MIDIChannelEvent::NoteOn &&
-            pEvent->GetParam2() > 0 && pEvent->HasSister() /* &&
-            ((m_aSkipRender[pEvent->GetParam1() / 64] >> (pEvent->GetParam1() & 63)) & 1) == 0 */) {
-            RenderNote(pEvent);
+            pEvent->GetParam2() > 0 && pEvent->HasSister()) {
+            if (!MIDI::IsSharp(pEvent->GetParam1()))
+                RenderNote(pEvent);
+            else
+                bHasSharp = true;
         }
     }
 
     for (size_t i = 0; i < 128; i++) {
         for (vector< int >::reverse_iterator it = (m_vState[i]).rbegin(); it != (m_vState[i]).rend(); it++) {
-            RenderNote(m_vEvents[*it]);
-            /*
-            if ((m_aSkipRender[i / 64] >> (i & 63)) & 1)
-                break;
-            */
+            if (!MIDI::IsSharp(m_vEvents[*it]->GetParam1()))
+                RenderNote(m_vEvents[*it]);
+            else
+                bHasSharp = true;
+        }
+    }
+
+    // Do it all again, but only for the sharps
+    if (bHasSharp) {
+        for (auto i = m_iEndPos; i >= m_iStartPos; i--) {
+            MIDIChannelEvent* pEvent = m_vEvents[i];
+            if (pEvent->GetChannelEventType() == MIDIChannelEvent::NoteOn &&
+                pEvent->GetParam2() > 0 && pEvent->HasSister() && MIDI::IsSharp(pEvent->GetParam1())) {
+                RenderNote(pEvent);
+            }
+        }
+
+        for (size_t i = 0; i < 128; i++) {
+            for (vector< int >::reverse_iterator it = (m_vState[i]).rbegin(); it != (m_vState[i]).rend(); it++) {
+                if (MIDI::IsSharp(m_vEvents[*it]->GetParam1()))
+                    RenderNote(m_vEvents[*it]);
+            }
         }
     }
 
@@ -1733,8 +1754,7 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
 
     // Default note positon and size
     float x = (m_pRenderer->GetBufferWidth() / 128.0f) * iNote;
-    if (viz.bVisualizePitchBends)
-        x = x + (m_pBends[iChannel]);
+    float cx = m_fWhiteCX * SharpRatio;
     float y = (m_pRenderer->GetBufferHeight() / 16.0f) * (iChannel % 16);
     float cy = (m_pRenderer->GetBufferHeight() / 16.0f);
     float fDeflate = m_fWhiteCX * 0.15f / 2.0f;
@@ -1754,6 +1774,12 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
         cy = cy * fVelocity;
         y = y + ((m_pRenderer->GetBufferHeight() / 16.0f) - cy);
     }
+    if (!cKey.bSameWidth) {
+        x = GetNoteX(iNote);
+        cx = MIDI::IsSharp(iNote) ? m_fWhiteCX * SharpRatio : m_fWhiteCX;
+    }
+    if (viz.bVisualizePitchBends)
+        x = x + (m_pBends[iChannel]);
 
     // Only render a playing note
     // No longer use PushNoteData()
@@ -1761,29 +1787,29 @@ void MainScreen::RenderNote(const MIDIChannelEvent* pNote)
         switch (cKey.iStyle)
         {
         case 1:
-            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
+            m_pRenderer->DrawRect(x, y, cx, cy, csTrack.iPrimaryRGB);
             break;
         case 2:
-            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iVeryDarkRGB);
-            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, (m_fWhiteCX * SharpRatio) - 2 * fDeflate, cy - 2 * fDeflate,
+            m_pRenderer->DrawRect(x, y, cx, cy, csTrack.iVeryDarkRGB);
+            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, cx - 2 * fDeflate, cy - 2 * fDeflate,
                 csTrack.iPrimaryRGB, csTrack.iDarkRGB, csTrack.iDarkRGB, csTrack.iPrimaryRGB);
             break;
         case 3:
             m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy,
                 csTrack.iDarkRGB, csTrack.iDarkRGB, csTrack.iVeryDarkRGB, csTrack.iVeryDarkRGB);
-            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, (m_fWhiteCX * SharpRatio) - 2 * fDeflate, cy - 2 * fDeflate,
+            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, cx - 2 * fDeflate, cy - 2 * fDeflate,
                 csTrack.iPrimaryRGB, csTrack.iPrimaryRGB, csTrack.iDarkRGB, csTrack.iDarkRGB);
             break;
         case 4:
-            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
-            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, (m_fWhiteCX * SharpRatio) - 2 * fDeflate, cy - 2 * fDeflate, csTrack.iDarkRGB);
+            m_pRenderer->DrawRect(x, y, cx, cy, csTrack.iPrimaryRGB);
+            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, cx - 2 * fDeflate, cy - 2 * fDeflate, csTrack.iDarkRGB);
             break;
         case 5:
-            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB);
-            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, (m_fWhiteCX * SharpRatio) - 2 * fDeflate, cy - 2 * fDeflate, 0);
+            m_pRenderer->DrawRect(x, y, cx, cy, csTrack.iPrimaryRGB);
+            m_pRenderer->DrawRect(x + fDeflate, y + fDeflate, cx - 2 * fDeflate, cy - 2 * fDeflate, 0);
             break;
         default: // Else (a secret style)
-            m_pRenderer->DrawRect(x, y, m_fWhiteCX * SharpRatio, cy, csTrack.iPrimaryRGB, csTrack.iDarkRGB, csTrack.iVeryDarkRGB, csTrack.iDarkRGB);
+            m_pRenderer->DrawRect(x, y, cx, cy, csTrack.iPrimaryRGB, csTrack.iDarkRGB, csTrack.iVeryDarkRGB, csTrack.iDarkRGB);
             break;
         }
         

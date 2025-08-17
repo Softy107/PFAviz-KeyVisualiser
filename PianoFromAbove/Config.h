@@ -213,7 +213,7 @@ struct KeyVisSettings : public ISettings {
     bool SaveConfigValues(TiXmlElement* txRoot);
 
     int iStyle, iMinVelocity;
-    bool bPerTrack, bTrackLines, bVelocitySize;
+    bool bPerTrack, bTrackLines, bVelocitySize, bSameWidth;
 };
 
 class Config : public ISettings

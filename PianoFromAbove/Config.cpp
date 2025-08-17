@@ -257,6 +257,7 @@ void KeyVisSettings::LoadDefaultValues() {
     this->bTrackLines = false;
     this->bVelocitySize = false;
     this->iMinVelocity = 10;
+    this->bSameWidth = true;
 }
 
 void AudioSettings::LoadMIDIDevices()
@@ -477,6 +478,8 @@ void KeyVisSettings::LoadConfigValues(TiXmlElement* txRoot) {
         this->bTrackLines = (iAttrVal != 0);
     if (txKey->QueryIntAttribute("VelocityToSize", &iAttrVal) == TIXML_SUCCESS)
         this->bVelocitySize = (iAttrVal != 0);
+    if (txKey->QueryIntAttribute("SameWidthNotes", &iAttrVal) == TIXML_SUCCESS)
+        this->bSameWidth = (iAttrVal != 0);
     txKey->QueryIntAttribute("Style", &this->iStyle);
     txKey->QueryIntAttribute("MinVelocity", &this->iMinVelocity);
 }
@@ -625,6 +628,7 @@ bool KeyVisSettings::SaveConfigValues(TiXmlElement* txRoot) {
     txKey->SetAttribute("PerTrack", this->bPerTrack);
     txKey->SetAttribute("TrackLines", this->bTrackLines);
     txKey->SetAttribute("VelocityToSize", this->bVelocitySize);
+    txKey->SetAttribute("SameWidthNotes", this->bSameWidth);
     txKey->SetAttribute("Style", this->iStyle);
     txKey->SetAttribute("MinVelocity", this->iMinVelocity);
 

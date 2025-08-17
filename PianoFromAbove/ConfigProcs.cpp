@@ -610,6 +610,7 @@ INT_PTR WINAPI KeyVisProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             cKey.bPerTrack = (IsDlgButtonChecked(hWnd, IDC_PERTRACK) == BST_CHECKED);
             cKey.bTrackLines = (IsDlgButtonChecked(hWnd, IDC_TRACKLINES) == BST_CHECKED);
             cKey.bVelocitySize = (IsDlgButtonChecked(hWnd, IDC_VELOCITYTOSIZE) == BST_CHECKED);
+            cKey.bSameWidth = (IsDlgButtonChecked(hWnd, IDC_SAMEWIDTH) == BST_CHECKED);
             char Velocity[128] = {};
             GetWindowTextA(GetDlgItem(hWnd, IDC_MINVELOCITY), Velocity, sizeof(Velocity));
             float MinVelocity = atof(Velocity);
@@ -639,6 +640,7 @@ VOID SetKeyVisProc(HWND hWnd, const KeyVisSettings& cKey)
     CheckDlgButton(hWnd, IDC_PERTRACK, cKey.bPerTrack ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hWnd, IDC_TRACKLINES, cKey.bTrackLines ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hWnd, IDC_VELOCITYTOSIZE, cKey.bVelocitySize ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hWnd, IDC_SAMEWIDTH, cKey.bSameWidth ? BST_CHECKED : BST_UNCHECKED);
     SendMessage(hWndStyle, CB_SETCURSEL, cKey.iStyle - 1, 0);
 
     char buf[128] = {};
