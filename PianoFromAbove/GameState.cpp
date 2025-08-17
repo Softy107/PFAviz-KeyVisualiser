@@ -285,6 +285,7 @@ GameState::GameError SplashScreen::Logic()
 
     static Config &config = Config::GetConfig();
     static PlaybackSettings &cPlayback = config.GetPlaybackSettings();
+  
 
     // Detect changes in state
     bool bPaused = cPlayback.GetPaused();
@@ -327,8 +328,8 @@ GameState::GameError SplashScreen::Logic()
         MIDIChannelEvent *pEvent = m_vEvents[m_iStartPos];
         if ( pEvent->GetChannelEventType() != MIDIChannelEvent::NoteOn )
             m_OutDevice.PlayEvent( pEvent->GetEventCode(), pEvent->GetParam1(), pEvent->GetParam2() );
-        else if ( !m_bMute && !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted )
-            m_OutDevice.PlayEvent( pEvent->GetEventCode(), pEvent->GetParam1(),
+        else if ( !m_bMute && !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted)
+            m_OutDevice.PlayEvent( pEvent->GetEventCode(), pEvent->GetParam1(), 
                                     static_cast< int >( pEvent->GetParam2() * m_dVolume + 0.5 ) );
         UpdateState( m_iStartPos );
         m_iStartPos++;
@@ -991,6 +992,7 @@ GameState::GameError MainScreen::Logic( void )
     static const VisualSettings &cVisual = config.GetVisualSettings();
     static const VideoSettings &cVideo = config.GetVideoSettings();
     static const VizSettings &cViz = config.GetVizSettings();
+    KeyVisSettings& cKey = config.GetKeyVisSettings();
 
     // people are probably going to yell at me if you can't change the bar color during playback
     m_csKBRed.SetColor(cViz.iBarColor, 0.5f);
@@ -1096,7 +1098,7 @@ GameState::GameError MainScreen::Logic( void )
                     m_pBends[pEvent->GetChannel()] = (notex_table[1] - notex_table[0]) * (((short)(((pEvent->GetParam2() << 7) | pEvent->GetParam1()) - 8192)) / (8192.0f / 12.0f));
                 m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(), pEvent->GetParam2());
             }
-            else if (!m_bMute && (!m_bAnyChannelMuted || !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted)) {
+            else if (!m_bMute && (!m_bAnyChannelMuted || !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted) && pEvent->GetParam2() > cKey.iMinVelocity) {
                 m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(),
                     static_cast<int>(pEvent->GetParam2() * m_dVolume + 0.5));
                 notes_played++;
