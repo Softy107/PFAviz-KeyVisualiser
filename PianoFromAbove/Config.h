@@ -50,6 +50,9 @@ struct VisualSettings : public ISettings
     int iFirstKey, iLastKey;
     bool bAlwaysShowControls, bAssociateFiles;
     unsigned int colors[16], iBkgColor;
+
+    double dFwdBackSecs, dSpeedUpPct;
+    bool bShowFPS, bLimitFPS;
 };
 
 struct AudioSettings : public ISettings
@@ -71,7 +74,6 @@ struct VideoSettings : public ISettings
     bool SaveConfigValues( TiXmlElement *txRoot );
 
     enum Renderer { Direct3D, OpenGL, GDI } eRenderer;
-    bool bShowFPS, bLimitFPS;
 };
 
 struct ControlsSettings : public ISettings
@@ -79,8 +81,6 @@ struct ControlsSettings : public ISettings
     void LoadDefaultValues();
     void LoadConfigValues( TiXmlElement *txRoot );
     bool SaveConfigValues( TiXmlElement *txRoot );
-
-    double dFwdBackSecs, dSpeedUpPct;
 };
 
 class PlaybackSettings : public ISettings

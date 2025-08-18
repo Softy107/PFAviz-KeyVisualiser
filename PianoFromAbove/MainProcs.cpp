@@ -87,7 +87,7 @@ LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
     static PlaybackSettings &cPlayback = Config::GetConfig().GetPlaybackSettings();
     static ViewSettings &cView = Config::GetConfig().GetViewSettings();
-    static const ControlsSettings &cControls = Config::GetConfig().GetControlsSettings();
+    static const VisualSettings &cVisual = Config::GetConfig().GetVisualSettings();
     static bool bInSizeMove = false;
 
     switch( msg )
@@ -147,10 +147,10 @@ LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
                     if ( cPlayback.GetPlayMode() ) HandOffMsg( msg, wParam, lParam );
                     return 0;
                 case ID_PLAY_INCREASERATE:
-                    cPlayback.SetSpeed( cPlayback.GetSpeed() * ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
+                    cPlayback.SetSpeed( cPlayback.GetSpeed() * ( 1.0 + cVisual.dSpeedUpPct / 100.0 ), true );
                     return 0;
                 case ID_PLAY_DECREASERATE:
-                    cPlayback.SetSpeed( cPlayback.GetSpeed() / ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
+                    cPlayback.SetSpeed( cPlayback.GetSpeed() / ( 1.0 + cVisual.dSpeedUpPct / 100.0 ), true );
                     return 0;
                 case ID_PLAY_RESETRATE:
                     cPlayback.SetSpeed( 1.0, true );

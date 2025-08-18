@@ -248,7 +248,7 @@ DWORD WINAPI GameThread( LPVOID lpParameter )
 
     // Initialize Direct3D
     D3D12Renderer *pRenderer = new D3D12Renderer();
-    auto init_res = pRenderer->Init(g_hWndGfx, Config::GetConfig().GetVideoSettings().bLimitFPS);
+    auto init_res = pRenderer->Init(g_hWndGfx, Config::GetConfig().GetVisualSettings().bLimitFPS);
     if( FAILED(std::get<0>(init_res)) )
     {
         wchar_t msg[1024] = {};

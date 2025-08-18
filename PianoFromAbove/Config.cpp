@@ -185,6 +185,12 @@ void VisualSettings::LoadDefaultValues()
         this->colors[count] = RGB( R, G, B );
     }
     swap( this->colors[2], this->colors[4] );
+
+    this->dFwdBackSecs = 3.0;
+    this->dSpeedUpPct = 10.0;
+
+    this->bLimitFPS = true;
+    this->bShowFPS = false;
 }
 
 void AudioSettings::LoadDefaultValues()
@@ -195,15 +201,12 @@ void AudioSettings::LoadDefaultValues()
 
 void VideoSettings::LoadDefaultValues()
 {
-    this->bLimitFPS = true;
-    this->bShowFPS = false;
     this->eRenderer = Direct3D;
 }
 
 void ControlsSettings::LoadDefaultValues()
 {
-    this->dFwdBackSecs = 3.0;
-    this->dSpeedUpPct = 10.0;
+    return;
 }
 
 void PlaybackSettings::LoadDefaultValues()
@@ -318,6 +321,20 @@ void VisualSettings::LoadConfigValues( TiXmlElement *txRoot )
              txBkgColor->QueryIntAttribute( "G", &g ) == TIXML_SUCCESS &&
              txBkgColor->QueryIntAttribute( "B", &b ) == TIXML_SUCCESS )
             this->iBkgColor = ( ( r & 0xFF ) << 0 ) | ( ( g & 0xFF ) << 8 ) | ( ( b & 0xFF ) << 16 );
+
+    TiXmlElement* txControls = txRoot->FirstChildElement("Controls");
+    if (!txControls) return;
+
+    txControls->QueryDoubleAttribute("FwdBackSecs", &this->dFwdBackSecs);
+    txControls->QueryDoubleAttribute("SpeedUpPct", &this->dSpeedUpPct);
+
+    TiXmlElement* txVideo = txRoot->FirstChildElement("Video");
+    if (!txVideo) return;
+
+    if (txVideo->QueryIntAttribute("ShowFPS", &iAttrVal) == TIXML_SUCCESS)
+        this->bShowFPS = (iAttrVal != 0);
+    if (txVideo->QueryIntAttribute("LimitFPS", &iAttrVal) == TIXML_SUCCESS)
+        this->bLimitFPS = (iAttrVal != 0);
 }
 
 void AudioSettings::LoadConfigValues( TiXmlElement *txRoot )
@@ -341,21 +358,13 @@ void VideoSettings::LoadConfigValues( TiXmlElement *txRoot )
     if ( !txVideo ) return;
 
     int iAttrVal;
-    if ( txVideo->QueryIntAttribute( "ShowFPS", &iAttrVal ) == TIXML_SUCCESS )
-        this->bShowFPS = ( iAttrVal != 0 );
-    if ( txVideo->QueryIntAttribute( "LimitFPS", &iAttrVal ) == TIXML_SUCCESS )
-        this->bLimitFPS = ( iAttrVal != 0 );
     if ( txVideo->QueryIntAttribute( "Renderer", &iAttrVal ) == TIXML_SUCCESS )
         this->eRenderer = static_cast< Renderer >( iAttrVal );
 }
 
 void ControlsSettings::LoadConfigValues( TiXmlElement *txRoot )
 {
-    TiXmlElement *txControls = txRoot->FirstChildElement( "Controls" );
-    if ( !txControls ) return;
-
-    txControls->QueryDoubleAttribute( "FwdBackSecs", &this->dFwdBackSecs );
-    txControls->QueryDoubleAttribute( "SpeedUpPct", &this->dSpeedUpPct );
+    return;
 }
 
 void SongLibrary::LoadConfigValues(TiXmlElement* txRoot)
@@ -515,6 +524,16 @@ bool VisualSettings::SaveConfigValues( TiXmlElement *txRoot )
     txBkgColor->SetAttribute( "G", ( this->iBkgColor >>  8 ) & 0xFF );
     txBkgColor->SetAttribute( "B", ( this->iBkgColor >> 16 ) & 0xFF );
 
+    TiXmlElement* txControls = new TiXmlElement("Controls");
+    txRoot->LinkEndChild(txControls);
+    txControls->SetDoubleAttribute("FwdBackSecs", this->dFwdBackSecs);
+    txControls->SetDoubleAttribute("SpeedUpPct", this->dSpeedUpPct);
+
+    TiXmlElement* txVideo = new TiXmlElement("Video");
+    txRoot->LinkEndChild(txVideo);
+    txVideo->SetAttribute("ShowFPS", this->bShowFPS);
+    txVideo->SetAttribute("LimitFPS", this->bLimitFPS);
+
     return true;
 }
 
@@ -534,17 +553,12 @@ bool VideoSettings::SaveConfigValues( TiXmlElement *txRoot )
     TiXmlElement *txVideo = new TiXmlElement( "Video" );
     txRoot->LinkEndChild( txVideo );
     txVideo->SetAttribute( "Renderer", this->eRenderer );
-    txVideo->SetAttribute( "ShowFPS", this->bShowFPS );
-    txVideo->SetAttribute( "LimitFPS", this->bLimitFPS );
     return true;
 }
 
 bool ControlsSettings::SaveConfigValues( TiXmlElement *txRoot )
 {
-    TiXmlElement *txControls = new TiXmlElement( "Controls" );
-    txRoot->LinkEndChild( txControls );
-    txControls->SetDoubleAttribute( "FwdBackSecs", this->dFwdBackSecs );
-    txControls->SetDoubleAttribute( "SpeedUpPct", this->dSpeedUpPct );
+    
     return true;
 }
 

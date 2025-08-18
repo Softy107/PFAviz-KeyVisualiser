@@ -808,7 +808,7 @@ GameState::GameError MainScreen::MsgProc( HWND, UINT msg, WPARAM wParam, LPARAM 
     static Config &config = Config::GetConfig();
     static PlaybackSettings &cPlayback = config.GetPlaybackSettings();
     static ViewSettings &cView = config.GetViewSettings();
-    static const ControlsSettings &cControls = config.GetControlsSettings();
+    static const VisualSettings & cVisual = config.GetVisualSettings();
     static const AudioSettings &cAudio = config.GetAudioSettings();
     static const VizSettings &cViz = config.GetVizSettings();
 
@@ -828,10 +828,10 @@ GameState::GameError MainScreen::MsgProc( HWND, UINT msg, WPARAM wParam, LPARAM 
                     cPlayback.SetStopped(true);
                     return Success;
                 case ID_PLAY_SKIPFWD:
-                    JumpTo(static_cast<long long>(m_llStartTime + cControls.dFwdBackSecs * 1000000));
+                    JumpTo(static_cast<long long>(m_llStartTime + cVisual.dFwdBackSecs * 1000000));
                     return Success;
                 case ID_PLAY_SKIPBACK:
-                    JumpTo(static_cast<long long>(m_llStartTime - cControls.dFwdBackSecs * 1000000));
+                    JumpTo(static_cast<long long>(m_llStartTime - cVisual.dFwdBackSecs * 1000000));
                     return Success;
                 case ID_VIEW_RESETDEVICE:
                     m_pRenderer->ResetDevice();
@@ -886,22 +886,22 @@ GameState::GameError MainScreen::MsgProc( HWND, UINT msg, WPARAM wParam, LPARAM 
                     if ( bAlt && !bCtrl )
                         cPlayback.SetVolume( min( cPlayback.GetVolume() + 0.1, 1.0 ), true );
                     else if ( !bAlt && !bShift )
-                        cPlayback.SetSpeed( cPlayback.GetSpeed() / ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
+                        cPlayback.SetSpeed( cPlayback.GetSpeed() / ( 1.0 + cVisual.dSpeedUpPct / 100.0 ), true );
                     return Success;
                 case VK_DOWN:
                     if ( bAlt && !bShift && !bCtrl )
                         cPlayback.SetVolume( max( cPlayback.GetVolume() - 0.1, 0.0 ), true );
                     else if ( !bAlt && !bShift )
-                        cPlayback.SetSpeed( cPlayback.GetSpeed() * ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
+                        cPlayback.SetSpeed( cPlayback.GetSpeed() * ( 1.0 + cVisual.dSpeedUpPct / 100.0 ), true );
                     return Success;
                 case 'R':
                     cPlayback.SetSpeed( 1.0, true );
                     return Success;
                 case VK_LEFT:
-                    JumpTo(static_cast<long long>(m_llStartTime - cControls.dFwdBackSecs * 1000000));
+                    JumpTo(static_cast<long long>(m_llStartTime - cVisual.dFwdBackSecs * 1000000));
                     return Success;
                 case VK_RIGHT:
-                    JumpTo(static_cast<long long>(m_llStartTime + cControls.dFwdBackSecs * 1000000));
+                    JumpTo(static_cast<long long>(m_llStartTime + cVisual.dFwdBackSecs * 1000000));
                     return Success;
                 case 'M':
                     cPlayback.ToggleMute( true );
@@ -1021,13 +1021,13 @@ GameState::GameError MainScreen::Logic( void )
     m_eKeysShown = cVisual.eKeysShown;
     m_iStartNote = min( cVisual.iFirstKey, cVisual.iLastKey );
     m_iEndNote = max( cVisual.iFirstKey, cVisual.iLastKey );
-    m_bShowFPS = cVideo.bShowFPS;
+    m_bShowFPS = cVisual.bShowFPS;
     if (m_bDumpFrames)
         m_pRenderer->SetLimitFPS(false);
     else if (m_Timer.m_bManualTimer)
         m_pRenderer->SetLimitFPS(true);
     else
-        m_pRenderer->SetLimitFPS( cVideo.bLimitFPS );
+        m_pRenderer->SetLimitFPS(cVisual.bLimitFPS );
     if ( cVisual.iBkgColor != m_csBackground.iOrigBGR ) m_csBackground.SetColor( cVisual.iBkgColor, 0.7f, 1.3f );
 
     m_bAnyChannelMuted = false;

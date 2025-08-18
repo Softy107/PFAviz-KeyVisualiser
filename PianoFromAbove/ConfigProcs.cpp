@@ -22,9 +22,9 @@
 
 VOID DoPreferences( HWND hWndOwner )
 {
-    int pDialogs[] = { IDD_PP1_VISUAL, IDD_PP6_KEYVIS, IDD_PP2_AUDIO, IDD_PP3_VIDEO, IDD_PP4_CONTROLS, IDD_PP5_VIZ };
-    DLGPROC pProcs[] = { VisualProc, KeyVisProc, AudioProc, VideoProc, ControlsProc, VizProc };
-    LPCWSTR pTitles[] = { TEXT( "Visual" ), TEXT("KeyVisualiser"), TEXT("Audio"), TEXT("Video"), TEXT("Controls"), TEXT("Viz")};
+    int pDialogs[] = { IDD_PP1_VISUAL, IDD_PP6_KEYVIS, IDD_PP2_AUDIO, IDD_PP5_VIZ };
+    DLGPROC pProcs[] = { VisualProc, KeyVisProc, AudioProc, VizProc };
+    LPCWSTR pTitles[] = { TEXT( "Stock" ), TEXT("KeyVisualiser"), TEXT("Audio"), TEXT("Viz")};
     PROPSHEETPAGE psp[sizeof(pDialogs) / sizeof(int)];
     PROPSHEETHEADER psh;
 
@@ -65,8 +65,21 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
     {
         case WM_INITDIALOG:
         {
-            // Config to fill out the form
+            
             Config &config = Config::GetConfig();
+            const VisualSettings& cVisual = config.GetVisualSettings();
+
+            HWND hWndFwdBack = GetDlgItem(hWnd, IDC_LRARROWS);
+            HWND hWndSpeedPct = GetDlgItem(hWnd, IDC_UDARROWS);
+
+            // Edit boxes
+            TCHAR buf[32];
+            _stprintf_s(buf, TEXT("%g"), cVisual.dFwdBackSecs);
+            SetWindowText(hWndFwdBack, buf);
+            _stprintf_s(buf, TEXT("%g"), cVisual.dSpeedUpPct);
+            SetWindowText(hWndSpeedPct, buf);
+
+            // Config to fill out the form
             SetVisualProc( hWnd, config.GetVisualSettings(), config.GetVizSettings() );
             return TRUE;
         }
@@ -153,6 +166,37 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
                     cVisual.iBkgColor = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_BKGCOLOR ), GWLP_USERDATA );
                     cViz.iBarColor = (int)GetWindowLongPtr(GetDlgItem(hWnd, IDC_BARCOLOR), GWLP_USERDATA);
 
+                    // Edit boxes
+                    TCHAR buf[32];
+                    double dEditVal = 0;
+
+                    HWND hWndFwdBack = GetDlgItem(hWnd, IDC_LRARROWS);
+                    int len = GetWindowText(hWndFwdBack, buf, 32);
+                    if (len > 0 && _stscanf_s(buf, TEXT("%lf"), &dEditVal) == 1)
+                        cVisual.dFwdBackSecs = dEditVal;
+                    else
+                    {
+                        MessageBox(hWnd, TEXT("Please specify a numeric value for the left and right arrows"), TEXT("Error"), MB_OK | MB_ICONEXCLAMATION);
+                        PostMessage(hWnd, WM_NEXTDLGCTL, (WPARAM)hWndFwdBack, TRUE);
+                        SetWindowLongPtr(hWnd, DWLP_MSGRESULT, PSNRET_INVALID);
+                        return TRUE;
+                    }
+
+                    HWND hWndSpeedPct = GetDlgItem(hWnd, IDC_UDARROWS);
+                    len = GetWindowText(hWndSpeedPct, buf, 32);
+                    if (len > 0 && _stscanf_s(buf, TEXT("%lf"), &dEditVal) == 1)
+                        cVisual.dSpeedUpPct = dEditVal;
+                    else
+                    {
+                        MessageBox(hWnd, TEXT("Please specify a numeric value for the up and down arrows"), TEXT("Error"), MB_OK | MB_ICONEXCLAMATION);
+                        PostMessage(hWnd, WM_NEXTDLGCTL, (WPARAM)hWndSpeedPct, TRUE);
+                        SetWindowLongPtr(hWnd, DWLP_MSGRESULT, PSNRET_INVALID);
+                        return TRUE;
+                    }
+
+                    cVisual.bShowFPS = (IsDlgButtonChecked(hWnd, IDC_DISPLAYFPS) == BST_CHECKED);
+                    cVisual.bLimitFPS = (IsDlgButtonChecked(hWnd, IDC_LIMITFPS) == BST_CHECKED);
+
                     // Report success and return
                     config.SetVisualSettings( cVisual );
                     if ( cView.GetFullScreen() && bAlwaysShowControls != cVisual.bAlwaysShowControls )
@@ -174,7 +218,8 @@ VOID SetVisualProc( HWND hWnd, const VisualSettings &cVisual, const VizSettings&
     // Set values
     CheckDlgButton( hWnd, IDC_SHOWCONTROLS, cVisual.bAlwaysShowControls ? BST_CHECKED : BST_UNCHECKED );
     CheckDlgButton( hWnd, IDC_ASSOCIATEFILES, cVisual.bAssociateFiles ? BST_CHECKED : BST_UNCHECKED );
-    EnableWindow(GetDlgItem(hWnd, IDC_STYLE), TRUE);
+    CheckDlgButton(hWnd, IDC_DISPLAYFPS, cVisual.bShowFPS ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hWnd, IDC_LIMITFPS, cVisual.bLimitFPS ? BST_CHECKED : BST_UNCHECKED);
 
     // Colors
     for ( int i = 0; i < IDC_COLOR16 - IDC_COLOR1 + 1; i++ )
@@ -263,8 +308,7 @@ INT_PTR WINAPI VideoProc( HWND hWnd, UINT msg, WPARAM, LPARAM lParam )
             const VideoSettings &cVideo = config.GetVideoSettings();
 
             CheckRadioButton( hWnd, IDC_DIRECT3D, IDC_GDI, IDC_DIRECT3D + cVideo.eRenderer );
-            CheckDlgButton( hWnd, IDC_DISPLAYFPS, cVideo.bShowFPS ? BST_CHECKED : BST_UNCHECKED );
-            CheckDlgButton( hWnd, IDC_LIMITFPS, cVideo.bLimitFPS ? BST_CHECKED : BST_UNCHECKED );
+            
 
             return TRUE;
         }
@@ -287,8 +331,7 @@ INT_PTR WINAPI VideoProc( HWND hWnd, UINT msg, WPARAM, LPARAM lParam )
                                          IsDlgButtonChecked( hWnd, IDC_OPENGL ) == BST_CHECKED ? cVideo.OpenGL :
                                          IsDlgButtonChecked( hWnd, IDC_GDI ) == BST_CHECKED ? cVideo.GDI :
                                          cVideo.Direct3D );
-                    cVideo.bShowFPS = ( IsDlgButtonChecked( hWnd, IDC_DISPLAYFPS ) == BST_CHECKED );
-                    cVideo.bLimitFPS = ( IsDlgButtonChecked( hWnd, IDC_LIMITFPS ) == BST_CHECKED );
+                    
 
                     config.SetVideoSettings( cVideo );
                     SetWindowLongPtr( hWnd, DWLP_MSGRESULT, PSNRET_NOERROR );
@@ -310,16 +353,6 @@ INT_PTR WINAPI ControlsProc( HWND hWnd, UINT msg, WPARAM, LPARAM lParam )
             // Config to fill out the form
             Config &config = Config::GetConfig();
             const ControlsSettings &cControls = config.GetControlsSettings();
-
-            HWND hWndFwdBack = GetDlgItem( hWnd, IDC_LRARROWS );
-            HWND hWndSpeedPct = GetDlgItem( hWnd, IDC_UDARROWS );
-
-            // Edit boxes
-            TCHAR buf[32];
-            _stprintf_s( buf, TEXT( "%g" ), cControls.dFwdBackSecs );
-            SetWindowText( hWndFwdBack, buf );
-            _stprintf_s( buf, TEXT( "%g" ), cControls.dSpeedUpPct );
-            SetWindowText( hWndSpeedPct, buf );
 
             return TRUE;
         }
@@ -371,33 +404,7 @@ INT_PTR WINAPI ControlsProc( HWND hWnd, UINT msg, WPARAM, LPARAM lParam )
                     Config &config = Config::GetConfig();
                     ControlsSettings cControls = config.GetControlsSettings();
 
-                    // Edit boxes
-                    TCHAR buf[32];
-                    double dEditVal = 0;
                     
-                    HWND hWndFwdBack = GetDlgItem( hWnd, IDC_LRARROWS );
-                    int len = GetWindowText( hWndFwdBack, buf, 32 );
-                    if ( len > 0 && _stscanf_s( buf, TEXT( "%lf" ), &dEditVal ) == 1 )
-                        cControls.dFwdBackSecs = dEditVal;
-                    else
-                    {
-                        MessageBox( hWnd, TEXT( "Please specify a numeric value for the left and right arrows" ), TEXT( "Error" ), MB_OK | MB_ICONEXCLAMATION );
-                        PostMessage( hWnd, WM_NEXTDLGCTL, ( WPARAM )hWndFwdBack, TRUE);
-                        SetWindowLongPtr( hWnd, DWLP_MSGRESULT, PSNRET_INVALID );
-                        return TRUE;
-                    }
-                    
-                    HWND hWndSpeedPct = GetDlgItem( hWnd, IDC_UDARROWS );
-                    len = GetWindowText( hWndSpeedPct, buf, 32 );
-                    if ( len > 0 && _stscanf_s( buf, TEXT( "%lf" ), &dEditVal ) == 1 )
-                        cControls.dSpeedUpPct = dEditVal;
-                    else
-                    {
-                        MessageBox( hWnd, TEXT( "Please specify a numeric value for the up and down arrows" ), TEXT( "Error" ), MB_OK | MB_ICONEXCLAMATION );
-                        PostMessage( hWnd, WM_NEXTDLGCTL, ( WPARAM )hWndSpeedPct, TRUE);
-                        SetWindowLongPtr( hWnd, DWLP_MSGRESULT, PSNRET_INVALID );
-                        return TRUE;
-                    }
                     
                     // Report success and return
                     config.SetControlsSettings( cControls );
