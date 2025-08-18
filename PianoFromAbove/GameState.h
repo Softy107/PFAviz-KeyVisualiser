@@ -260,7 +260,6 @@ private:
     bool m_bMute, m_bShowNC;
     bool m_bAnyChannelMuted;
     double m_dVolume;
-    bool m_bTickMode = false;
     long long llRendered, m_iNotesPlayed;
     long long llMaxnps, llMaxplph = 0; // Max stats
 

@@ -52,7 +52,6 @@ void Config::LoadDefaultValues()
     m_VisualSettings.LoadDefaultValues();
     m_AudioSettings.LoadDefaultValues();
     m_VideoSettings.LoadDefaultValues();
-    m_ControlsSettings.LoadDefaultValues();
     m_PlaybackSettings.LoadDefaultValues();
     m_ViewSettings.LoadDefaultValues();
     m_VizSettings.LoadDefaultValues();
@@ -102,7 +101,6 @@ void Config::LoadConfigValues( TiXmlElement *txRoot )
     m_VisualSettings.LoadConfigValues( txRoot );
     m_AudioSettings.LoadConfigValues( txRoot );
     m_VideoSettings.LoadConfigValues( txRoot );
-    m_ControlsSettings.LoadConfigValues( txRoot );
     m_SongLibrary.LoadConfigValues( txRoot );
     m_PlaybackSettings.LoadConfigValues( txRoot );
     m_ViewSettings.LoadConfigValues( txRoot );
@@ -157,7 +155,6 @@ bool Config::SaveConfigValues( TiXmlElement *txRoot )
     bSaved &= m_VisualSettings.SaveConfigValues( txRoot );
     bSaved &= m_AudioSettings.SaveConfigValues( txRoot );
     bSaved &= m_VideoSettings.SaveConfigValues( txRoot );
-    bSaved &= m_ControlsSettings.SaveConfigValues( txRoot );
     bSaved &= m_SongLibrary.SaveConfigValues( txRoot );
     bSaved &= m_PlaybackSettings.SaveConfigValues( txRoot );
     bSaved &= m_ViewSettings.SaveConfigValues( txRoot );
@@ -202,11 +199,6 @@ void AudioSettings::LoadDefaultValues()
 void VideoSettings::LoadDefaultValues()
 {
     this->eRenderer = Direct3D;
-}
-
-void ControlsSettings::LoadDefaultValues()
-{
-    return;
 }
 
 void PlaybackSettings::LoadDefaultValues()
@@ -360,11 +352,6 @@ void VideoSettings::LoadConfigValues( TiXmlElement *txRoot )
     int iAttrVal;
     if ( txVideo->QueryIntAttribute( "Renderer", &iAttrVal ) == TIXML_SUCCESS )
         this->eRenderer = static_cast< Renderer >( iAttrVal );
-}
-
-void ControlsSettings::LoadConfigValues( TiXmlElement *txRoot )
-{
-    return;
 }
 
 void SongLibrary::LoadConfigValues(TiXmlElement* txRoot)
@@ -553,12 +540,6 @@ bool VideoSettings::SaveConfigValues( TiXmlElement *txRoot )
     TiXmlElement *txVideo = new TiXmlElement( "Video" );
     txRoot->LinkEndChild( txVideo );
     txVideo->SetAttribute( "Renderer", this->eRenderer );
-    return true;
-}
-
-bool ControlsSettings::SaveConfigValues( TiXmlElement *txRoot )
-{
-    
     return true;
 }
 

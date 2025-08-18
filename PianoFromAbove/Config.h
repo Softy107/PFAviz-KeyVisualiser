@@ -76,13 +76,6 @@ struct VideoSettings : public ISettings
     enum Renderer { Direct3D, OpenGL, GDI } eRenderer;
 };
 
-struct ControlsSettings : public ISettings
-{
-    void LoadDefaultValues();
-    void LoadConfigValues( TiXmlElement *txRoot );
-    bool SaveConfigValues( TiXmlElement *txRoot );
-};
-
 class PlaybackSettings : public ISettings
 {
 public:
@@ -235,7 +228,6 @@ public:
     const VisualSettings& GetVisualSettings() const { return m_VisualSettings; }
     const AudioSettings& GetAudioSettings() const { return m_AudioSettings; }
     const VideoSettings& GetVideoSettings() const { return m_VideoSettings; }
-    const ControlsSettings& GetControlsSettings() const { return m_ControlsSettings; }
     PlaybackSettings& GetPlaybackSettings() { return m_PlaybackSettings; }
     ViewSettings& GetViewSettings() { return m_ViewSettings; }
     VizSettings& GetVizSettings() { return m_VizSettings; }
@@ -244,7 +236,6 @@ public:
     void SetVisualSettings(const VisualSettings &VisualSettings) { m_VisualSettings = VisualSettings; }
     void SetAudioSettings(const AudioSettings &audioSettings) { m_AudioSettings = audioSettings; }
     void SetVideoSettings(const VideoSettings &videoSettings) { m_VideoSettings = videoSettings; }
-    void SetControlsSettings(const ControlsSettings &ControlsSettings) { m_ControlsSettings = ControlsSettings; }
     void SetVizSettings(const VizSettings& VizSettings) { m_VizSettings = VizSettings; }
     void SetKeyVisSettings(const KeyVisSettings& KeyVisSettings) { m_KeyVisSettings = KeyVisSettings; };
 
@@ -262,7 +253,6 @@ private:
     VisualSettings m_VisualSettings;
     AudioSettings m_AudioSettings;
     VideoSettings m_VideoSettings;
-    ControlsSettings m_ControlsSettings;
     SongLibrary m_SongLibrary;
     PlaybackSettings m_PlaybackSettings;
     ViewSettings m_ViewSettings;

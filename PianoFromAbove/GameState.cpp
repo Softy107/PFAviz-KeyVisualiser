@@ -990,7 +990,6 @@ GameState::GameError MainScreen::Logic( void )
     static PlaybackSettings &cPlayback = config.GetPlaybackSettings();
     static const ViewSettings &cView = config.GetViewSettings();
     static const VisualSettings &cVisual = config.GetVisualSettings();
-    static const VideoSettings &cVideo = config.GetVideoSettings();
     static const VizSettings &cViz = config.GetVizSettings();
     KeyVisSettings& cKey = config.GetKeyVisSettings();
 
@@ -1647,9 +1646,6 @@ GameState::GameError MainScreen::Render()
 // Depends on m_llStartTime, m_llTimeSpan, m_eKeysShown, m_iStartNote, m_iEndNote
 void MainScreen::RenderGlobals()
 {
-    // Midi info
-    const MIDI::MIDIInfo &mInfo = m_MIDI.GetInfo();
-
     // Screen X info
     m_fNotesX = m_fOffsetX + m_fTempOffsetX;
     m_fNotesCX = m_pRenderer->GetBufferWidth() * m_fZoomX * m_fTempZoomX;
