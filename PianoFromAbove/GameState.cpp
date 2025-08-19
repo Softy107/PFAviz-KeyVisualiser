@@ -1098,8 +1098,7 @@ GameState::GameError MainScreen::Logic( void )
                 m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(), pEvent->GetParam2());
             }
             else if (!m_bMute && (!m_bAnyChannelMuted || !m_vTrackSettings[pEvent->GetTrack()].aChannels[pEvent->GetChannel()].bMuted)) {
-                if (pEvent->GetParam2() > cKey.iMinVelocity) // If this was in the if statement above, NPS a Note counter wouldn't count correctly
-                    m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(), static_cast<int>(pEvent->GetParam2() * m_dVolume + 0.5));
+                m_OutDevice.PlayEvent(pEvent->GetEventCode(), pEvent->GetParam1(), static_cast<int>(pEvent->GetParam2() * m_dVolume + 0.5));
                 notes_played++;
                 m_iNotesPlayed++;
             }
