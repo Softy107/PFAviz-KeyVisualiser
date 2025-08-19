@@ -610,10 +610,6 @@ void MainScreen::InitColors()
     static const VizSettings& cViz = config.GetVizSettings();
 
     m_csBackground.SetColor( 0x00464646, 0.7f, 1.3f );
-    m_csKBBackground.SetColor( 0x00999999, 0.4f, 0.0f );
-    m_csKBRed.SetColor(cViz.iBarColor, 0.5f);
-    m_csKBWhite.SetColor( 0x00FFFFFF, 0.8f, 0.6f );
-    m_csKBSharp.SetColor( 0x00404040, 0.5f, 0.0f );
 }
 
 // Init state vars. Only those which validate the date.
@@ -992,9 +988,6 @@ GameState::GameError MainScreen::Logic( void )
     static const VisualSettings &cVisual = config.GetVisualSettings();
     static const VizSettings &cViz = config.GetVizSettings();
     KeyVisSettings& cKey = config.GetKeyVisSettings();
-
-    // people are probably going to yell at me if you can't change the bar color during playback
-    m_csKBRed.SetColor(cViz.iBarColor, 0.5f);
 
     // Detect changes in state
     bool bPaused = cPlayback.GetPaused();
