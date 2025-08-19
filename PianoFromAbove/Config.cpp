@@ -52,7 +52,6 @@ void Config::LoadDefaultValues()
     m_VisualSettings.LoadDefaultValues();
     m_AudioSettings.LoadDefaultValues();
     m_VideoSettings.LoadDefaultValues();
-    m_ControlsSettings.LoadDefaultValues();
     m_PlaybackSettings.LoadDefaultValues();
     m_ViewSettings.LoadDefaultValues();
     m_VizSettings.LoadDefaultValues();
@@ -84,6 +83,17 @@ void Config::LoadConfigValues()
         return;
 
     m_VizSettings.LoadConfigValues(txRoot);
+
+    // Another file, yippee!
+    doc = TiXmlDocument(sPath + "\\pfaviz-KeyVis.xml");
+    if (!doc.LoadFile())
+        return;
+
+    txRoot = doc.FirstChildElement();
+    if (!txRoot)
+        return;
+
+    m_KeyVisSettings.LoadConfigValues(txRoot);
 }
 
 void Config::LoadConfigValues( TiXmlElement *txRoot )
@@ -91,7 +101,6 @@ void Config::LoadConfigValues( TiXmlElement *txRoot )
     m_VisualSettings.LoadConfigValues( txRoot );
     m_AudioSettings.LoadConfigValues( txRoot );
     m_VideoSettings.LoadConfigValues( txRoot );
-    m_ControlsSettings.LoadConfigValues( txRoot );
     m_SongLibrary.LoadConfigValues( txRoot );
     m_PlaybackSettings.LoadConfigValues( txRoot );
     m_ViewSettings.LoadConfigValues( txRoot );
@@ -125,7 +134,19 @@ bool Config::SaveConfigValues()
 
     m_VizSettings.SaveConfigValues(txRoot);
 
-    return bStockRet && doc.SaveFile(sPath + "\\pfavizkhang.xml");
+    bool bVizRet = doc.SaveFile(sPath + "\\pfavizkhang.xml");
+
+    doc = TiXmlDocument();
+    decl = new TiXmlDeclaration("1.0", "", "");
+    doc.LinkEndChild(decl);
+    txRoot = new TiXmlElement(APPNAMENOSPACES);
+    doc.LinkEndChild(txRoot);
+
+    m_KeyVisSettings.SaveConfigValues(txRoot);
+
+    bool bKeyVisRet = doc.SaveFile(sPath + "\\pfaviz-KeyVis.xml");
+
+    return bStockRet && bVizRet && bKeyVisRet;
 }
 
 bool Config::SaveConfigValues( TiXmlElement *txRoot )
@@ -134,7 +155,6 @@ bool Config::SaveConfigValues( TiXmlElement *txRoot )
     bSaved &= m_VisualSettings.SaveConfigValues( txRoot );
     bSaved &= m_AudioSettings.SaveConfigValues( txRoot );
     bSaved &= m_VideoSettings.SaveConfigValues( txRoot );
-    bSaved &= m_ControlsSettings.SaveConfigValues( txRoot );
     bSaved &= m_SongLibrary.SaveConfigValues( txRoot );
     bSaved &= m_PlaybackSettings.SaveConfigValues( txRoot );
     bSaved &= m_ViewSettings.SaveConfigValues( txRoot );
@@ -162,6 +182,12 @@ void VisualSettings::LoadDefaultValues()
         this->colors[count] = RGB( R, G, B );
     }
     swap( this->colors[2], this->colors[4] );
+
+    this->dFwdBackSecs = 3.0;
+    this->dSpeedUpPct = 10.0;
+
+    this->bLimitFPS = true;
+    this->bShowFPS = false;
 }
 
 void AudioSettings::LoadDefaultValues()
@@ -172,15 +198,7 @@ void AudioSettings::LoadDefaultValues()
 
 void VideoSettings::LoadDefaultValues()
 {
-    this->bLimitFPS = true;
-    this->bShowFPS = false;
     this->eRenderer = Direct3D;
-}
-
-void ControlsSettings::LoadDefaultValues()
-{
-    this->dFwdBackSecs = 3.0;
-    this->dSpeedUpPct = 10.0;
 }
 
 void PlaybackSettings::LoadDefaultValues()
@@ -226,6 +244,15 @@ void VizSettings::LoadDefaultValues() {
     this->bDisableUI = false;
     this->fUIScale = 1.0f;
     this->sUIFont = L"";
+}
+
+void KeyVisSettings::LoadDefaultValues() {
+    this->iStyle = 1;
+    this->bPerTrack = false;
+    this->bTrackLines = false;
+    this->bVelocitySize = false;
+    this->iMinVelocity = 10;
+    this->bSameWidth = true;
 }
 
 void AudioSettings::LoadMIDIDevices()
@@ -286,6 +313,20 @@ void VisualSettings::LoadConfigValues( TiXmlElement *txRoot )
              txBkgColor->QueryIntAttribute( "G", &g ) == TIXML_SUCCESS &&
              txBkgColor->QueryIntAttribute( "B", &b ) == TIXML_SUCCESS )
             this->iBkgColor = ( ( r & 0xFF ) << 0 ) | ( ( g & 0xFF ) << 8 ) | ( ( b & 0xFF ) << 16 );
+
+    TiXmlElement* txControls = txRoot->FirstChildElement("Controls");
+    if (!txControls) return;
+
+    txControls->QueryDoubleAttribute("FwdBackSecs", &this->dFwdBackSecs);
+    txControls->QueryDoubleAttribute("SpeedUpPct", &this->dSpeedUpPct);
+
+    TiXmlElement* txVideo = txRoot->FirstChildElement("Video");
+    if (!txVideo) return;
+
+    if (txVideo->QueryIntAttribute("ShowFPS", &iAttrVal) == TIXML_SUCCESS)
+        this->bShowFPS = (iAttrVal != 0);
+    if (txVideo->QueryIntAttribute("LimitFPS", &iAttrVal) == TIXML_SUCCESS)
+        this->bLimitFPS = (iAttrVal != 0);
 }
 
 void AudioSettings::LoadConfigValues( TiXmlElement *txRoot )
@@ -309,21 +350,8 @@ void VideoSettings::LoadConfigValues( TiXmlElement *txRoot )
     if ( !txVideo ) return;
 
     int iAttrVal;
-    if ( txVideo->QueryIntAttribute( "ShowFPS", &iAttrVal ) == TIXML_SUCCESS )
-        this->bShowFPS = ( iAttrVal != 0 );
-    if ( txVideo->QueryIntAttribute( "LimitFPS", &iAttrVal ) == TIXML_SUCCESS )
-        this->bLimitFPS = ( iAttrVal != 0 );
     if ( txVideo->QueryIntAttribute( "Renderer", &iAttrVal ) == TIXML_SUCCESS )
         this->eRenderer = static_cast< Renderer >( iAttrVal );
-}
-
-void ControlsSettings::LoadConfigValues( TiXmlElement *txRoot )
-{
-    TiXmlElement *txControls = txRoot->FirstChildElement( "Controls" );
-    if ( !txControls ) return;
-
-    txControls->QueryDoubleAttribute( "FwdBackSecs", &this->dFwdBackSecs );
-    txControls->QueryDoubleAttribute( "SpeedUpPct", &this->dSpeedUpPct );
 }
 
 void SongLibrary::LoadConfigValues(TiXmlElement* txRoot)
@@ -434,6 +462,24 @@ void VizSettings::LoadConfigValues(TiXmlElement* txRoot) {
             iBarColor = ((r & 0xFF) << 0) | ((g & 0xFF) << 8) | ((b & 0xFF) << 16);
 }
 
+void KeyVisSettings::LoadConfigValues(TiXmlElement* txRoot) {
+    TiXmlElement* txKey = txRoot->FirstChildElement("KeyVis");
+    if (!txKey)
+        return;
+
+    int iAttrVal;
+    if (txKey->QueryIntAttribute("PerTrack", &iAttrVal) == TIXML_SUCCESS)
+        this->bPerTrack = (iAttrVal != 0);
+    if (txKey->QueryIntAttribute("TrackLines", &iAttrVal) == TIXML_SUCCESS)
+        this->bTrackLines = (iAttrVal != 0);
+    if (txKey->QueryIntAttribute("VelocityToSize", &iAttrVal) == TIXML_SUCCESS)
+        this->bVelocitySize = (iAttrVal != 0);
+    if (txKey->QueryIntAttribute("SameWidthNotes", &iAttrVal) == TIXML_SUCCESS)
+        this->bSameWidth = (iAttrVal != 0);
+    txKey->QueryIntAttribute("Style", &this->iStyle);
+    txKey->QueryIntAttribute("MinVelocity", &this->iMinVelocity);
+}
+
 //-----------------------------------------------------------------------------
 // SaveConfigValues
 //-----------------------------------------------------------------------------
@@ -465,6 +511,16 @@ bool VisualSettings::SaveConfigValues( TiXmlElement *txRoot )
     txBkgColor->SetAttribute( "G", ( this->iBkgColor >>  8 ) & 0xFF );
     txBkgColor->SetAttribute( "B", ( this->iBkgColor >> 16 ) & 0xFF );
 
+    TiXmlElement* txControls = new TiXmlElement("Controls");
+    txRoot->LinkEndChild(txControls);
+    txControls->SetDoubleAttribute("FwdBackSecs", this->dFwdBackSecs);
+    txControls->SetDoubleAttribute("SpeedUpPct", this->dSpeedUpPct);
+
+    TiXmlElement* txVideo = new TiXmlElement("Video");
+    txRoot->LinkEndChild(txVideo);
+    txVideo->SetAttribute("ShowFPS", this->bShowFPS);
+    txVideo->SetAttribute("LimitFPS", this->bLimitFPS);
+
     return true;
 }
 
@@ -484,17 +540,6 @@ bool VideoSettings::SaveConfigValues( TiXmlElement *txRoot )
     TiXmlElement *txVideo = new TiXmlElement( "Video" );
     txRoot->LinkEndChild( txVideo );
     txVideo->SetAttribute( "Renderer", this->eRenderer );
-    txVideo->SetAttribute( "ShowFPS", this->bShowFPS );
-    txVideo->SetAttribute( "LimitFPS", this->bLimitFPS );
-    return true;
-}
-
-bool ControlsSettings::SaveConfigValues( TiXmlElement *txRoot )
-{
-    TiXmlElement *txControls = new TiXmlElement( "Controls" );
-    txRoot->LinkEndChild( txControls );
-    txControls->SetDoubleAttribute( "FwdBackSecs", this->dFwdBackSecs );
-    txControls->SetDoubleAttribute( "SpeedUpPct", this->dSpeedUpPct );
     return true;
 }
 
@@ -568,6 +613,20 @@ bool VizSettings::SaveConfigValues(TiXmlElement* txRoot) {
     txBarColor->SetAttribute("R", (iBarColor >> 0) & 0xFF);
     txBarColor->SetAttribute("G", (iBarColor >> 8) & 0xFF);
     txBarColor->SetAttribute("B", (iBarColor >> 16) & 0xFF);
+    return true;
+}
+
+bool KeyVisSettings::SaveConfigValues(TiXmlElement* txRoot) {
+    TiXmlElement* txKey = new TiXmlElement("KeyVis");
+    txRoot->LinkEndChild(txKey);
+
+    txKey->SetAttribute("PerTrack", this->bPerTrack);
+    txKey->SetAttribute("TrackLines", this->bTrackLines);
+    txKey->SetAttribute("VelocityToSize", this->bVelocitySize);
+    txKey->SetAttribute("SameWidthNotes", this->bSameWidth);
+    txKey->SetAttribute("Style", this->iStyle);
+    txKey->SetAttribute("MinVelocity", this->iMinVelocity);
+
     return true;
 }
 

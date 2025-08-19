@@ -87,7 +87,7 @@ LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
     static PlaybackSettings &cPlayback = Config::GetConfig().GetPlaybackSettings();
     static ViewSettings &cView = Config::GetConfig().GetViewSettings();
-    static const ControlsSettings &cControls = Config::GetConfig().GetControlsSettings();
+    static const VisualSettings &cVisual = Config::GetConfig().GetVisualSettings();
     static bool bInSizeMove = false;
 
     switch( msg )
@@ -124,7 +124,7 @@ LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
                     cPlayback.SetPlayMode( GameState::Intro, true );
                     cPlayback.SetPlayable( false, true );
                     cPlayback.SetPosition( 0 );
-                    SetWindowText( g_hWnd, L"pfavizkhang-dx12 " __DATE__ );
+                    SetWindowText( g_hWnd, L"PFAviz-KeyVisualiser " );
                     HandOffMsg( WM_COMMAND, ID_CHANGESTATE, ( LPARAM )new IntroScreen( NULL, NULL ) );
                     return 0;
                 }
@@ -147,19 +147,13 @@ LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
                     if ( cPlayback.GetPlayMode() ) HandOffMsg( msg, wParam, lParam );
                     return 0;
                 case ID_PLAY_INCREASERATE:
-                    cPlayback.SetSpeed( cPlayback.GetSpeed() * ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
+                    cPlayback.SetSpeed( cPlayback.GetSpeed() * ( 1.0 + cVisual.dSpeedUpPct / 100.0 ), true );
                     return 0;
                 case ID_PLAY_DECREASERATE:
-                    cPlayback.SetSpeed( cPlayback.GetSpeed() / ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
+                    cPlayback.SetSpeed( cPlayback.GetSpeed() / ( 1.0 + cVisual.dSpeedUpPct / 100.0 ), true );
                     return 0;
                 case ID_PLAY_RESETRATE:
                     cPlayback.SetSpeed( 1.0, true );
-                    return 0;
-                case ID_PLAY_NFASTER:
-                    cPlayback.SetNSpeed( cPlayback.GetNSpeed() / ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
-                    return 0;
-                case ID_PLAY_NSLOWER:
-                    cPlayback.SetNSpeed( cPlayback.GetNSpeed() * ( 1.0 + cControls.dSpeedUpPct / 100.0 ), true );
                     return 0;
                 case ID_PLAY_NRESET:
                     cPlayback.SetNSpeed( 1.0, true );
@@ -176,20 +170,11 @@ LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
                 case ID_VIEW_CONTROLS:
                     cView.ToggleControls( true );
                     return 0;
-                case ID_VIEW_KEYBOARD:
-                    cView.ToggleKeyboard( true );
-                    return 0;
                 case ID_VIEW_ALWAYSONTOP:
                     cView.ToggleOnTop( true );
                     return 0;
                 case ID_VIEW_FULLSCREEN:
                     cView.ToggleFullScreen( true );
-                    return 0;
-                case ID_VIEW_MOVEANDZOOM:
-                    HandOffMsg( msg, wParam, lParam );
-                    return 0;
-                case ID_VIEW_RESETMOVEANDZOOM:
-                    HandOffMsg( msg, wParam, lParam );
                     return 0;
                 case ID_VIEW_SETWINDOWSIZE: {
                     DialogBox(NULL, MAKEINTRESOURCE(IDD_SETRESOLUTION), g_hWnd, SetResolutionProc);
@@ -615,13 +600,6 @@ HWND CreateRebar( HWND hWndOwner )
     SendMessage( hWndSpeed, TBM_SETRANGE, FALSE, MAKELONG( 5, 195 ) );
     SendMessage( hWndSpeed, TBM_SETLINESIZE, 0, 10 ); 
 
-    HWND hWndStatic4 = CreateWindowEx( 0, WC_STATIC, TEXT( "Notes:" ), WS_CHILD | WS_VISIBLE | SS_LEFT,
-                                       449, 8, 35, 13, hWndToolbar, NULL, g_hInstance, NULL );
-    HWND hWndNSpeed = CreateWindowEx( 0, TRACKBAR_CLASS, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | TBS_BOTH | TBS_NOTICKS,
-                                      485, 2, 100, 26, hWndToolbar, ( HMENU )IDC_NSPEED, g_hInstance, NULL );
-    SendMessage( hWndNSpeed, TBM_SETRANGE, FALSE, MAKELONG( 5, 195 ) );
-    SendMessage( hWndNSpeed, TBM_SETLINESIZE, 0, 10 ); 
-
     HWND hWndPosn = CreateWindowEx( 0, POSNCLASSNAME, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED,
                                     0, 0, 0, 0, hWndRebar, ( HMENU )IDC_POSNCTRL, g_hInstance, NULL );
 
@@ -630,7 +608,6 @@ HWND CreateRebar( HWND hWndOwner )
     SendMessage( hWndStatic1, WM_SETFONT, ( WPARAM )hFont, FALSE );
     SendMessage( hWndStatic2, WM_SETFONT, ( WPARAM )hFont, FALSE );
     SendMessage( hWndStatic3, WM_SETFONT, ( WPARAM )hFont, FALSE );
-    SendMessage( hWndStatic4, WM_SETFONT, ( WPARAM )hFont, FALSE );
     SendMessage( hWndSpeed, WM_SETFONT, ( WPARAM )hFont, FALSE );
 
     REBARBANDINFO rbbi;
@@ -656,7 +633,6 @@ HWND CreateRebar( HWND hWndOwner )
     g_hWndBar = hWndRebar; // SetMute needs it :/
     SetMute( cPlayback.GetMute() );
     SendMessage( hWndSpeed, TBM_SETPOS, TRUE, ( LONG )( 100 * cPlayback.GetSpeed() + .5 ) );
-    SendMessage( hWndNSpeed, TBM_SETPOS, TRUE, ( LONG )( 100 * (2.0 - cPlayback.GetNSpeed()) + .5 ) );
     SendMessage( hWndVolume, TBM_SETPOS, TRUE, ( LONG )( 100 * cPlayback.GetVolume() + .5 ) );
 
     return hWndRebar;
@@ -1185,10 +1161,14 @@ BOOL PlayFile( const wstring &sFile, bool bCustomSettings )
 
     const GameState::State ePlayMode = GameState::Practice;
 
+    //set loading window name
+    size_t pos = sFile.find_last_of(L"\\/");
+    std::wstring WinName = (pos == std::wstring::npos) ? sFile : sFile.substr(pos + 1);
+
     // Try loading the file
     MainScreen* pGameState = NULL;
     g_LoadingProgress.stage = MIDILoadingProgress::Stage::CopyToMem;
-    g_LoadingProgress.name = sFile;
+    g_LoadingProgress.name = WinName;
     g_LoadingProgress.progress = 0;
     g_LoadingProgress.max = 1;
     auto thread = std::thread([&]() {
@@ -1225,7 +1205,10 @@ BOOL PlayFile( const wstring &sFile, bool bCustomSettings )
     cPlayback.SetPaused( ePlayMode != GameState::Practice, true );
     cPlayback.SetPosition( 0 );
     cView.SetZoomMove( false, true );
-    SetWindowText( g_hWnd, sFile.c_str() + ( sFile.find_last_of( L'\\' ) + 1 ) );
+    // Set window title
+    std::wstring filename = sFile.substr(sFile.find_last_of(L'\\') + 1);
+    std::wstring title = L"PFAviz - " + filename;
+    SetWindowText(g_hWnd, title.c_str());
 
     // Switch game state
     HandOffMsg( WM_COMMAND, ID_CHANGESTATE, ( LPARAM )pGameState );

@@ -22,9 +22,9 @@
 
 VOID DoPreferences( HWND hWndOwner )
 {
-    int pDialogs[] = { IDD_PP1_VISUAL, IDD_PP2_AUDIO, IDD_PP3_VIDEO, IDD_PP4_CONTROLS, IDD_PP5_VIZ };
-    DLGPROC pProcs[] = { VisualProc, AudioProc, VideoProc, ControlsProc, VizProc };
-    LPCWSTR pTitles[] = { TEXT( "Visual" ), TEXT( "Audio" ), TEXT("Video"), TEXT( "Controls" ), TEXT("Viz") };
+    int pDialogs[] = { IDD_PP1_VISUAL, IDD_PP6_KEYVIS, IDD_PP2_AUDIO, IDD_PP5_VIZ };
+    DLGPROC pProcs[] = { VisualProc, KeyVisProc, AudioProc, VizProc };
+    LPCWSTR pTitles[] = { TEXT( "Stock" ), TEXT("KeyVisualiser"), TEXT("Audio"), TEXT("Viz")};
     PROPSHEETPAGE psp[sizeof(pDialogs) / sizeof(int)];
     PROPSHEETHEADER psh;
 
@@ -65,18 +65,21 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
     {
         case WM_INITDIALOG:
         {
-            HWND hWndFirstKey = GetDlgItem( hWnd, IDC_FIRSTKEY );
-            HWND hWndLastKey = GetDlgItem( hWnd, IDC_LASTKEY );
+            
+            Config &config = Config::GetConfig();
+            const VisualSettings& cVisual = config.GetVisualSettings();
 
-            // Enumerate the keys
-            for ( int i = MIDI::A0; i <= MIDI::C8; i++ )
-            {
-                SendMessage( hWndFirstKey, CB_ADDSTRING, i, ( LPARAM )MIDI::NoteName(i).c_str() );
-                SendMessage( hWndLastKey, CB_ADDSTRING, i, ( LPARAM )MIDI::NoteName(i).c_str() );
-            }
+            HWND hWndFwdBack = GetDlgItem(hWnd, IDC_LRARROWS);
+            HWND hWndSpeedPct = GetDlgItem(hWnd, IDC_UDARROWS);
+
+            // Edit boxes
+            TCHAR buf[32];
+            _stprintf_s(buf, TEXT("%g"), cVisual.dFwdBackSecs);
+            SetWindowText(hWndFwdBack, buf);
+            _stprintf_s(buf, TEXT("%g"), cVisual.dSpeedUpPct);
+            SetWindowText(hWndSpeedPct, buf);
 
             // Config to fill out the form
-            Config &config = Config::GetConfig();
             SetVisualProc( hWnd, config.GetVisualSettings(), config.GetVizSettings() );
             return TRUE;
         }
@@ -84,7 +87,7 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
         case WM_DRAWITEM:
         {
             LPDRAWITEMSTRUCT pdis = (LPDRAWITEMSTRUCT)lParam;
-            if ( ( pdis->CtlID < IDC_COLOR1 || pdis->CtlID > IDC_COLOR6 ) && pdis->CtlID != IDC_BKGCOLOR && pdis->CtlID != IDC_BARCOLOR )
+            if ( ( pdis->CtlID < IDC_COLOR1 || pdis->CtlID > IDC_COLOR16 ) && pdis->CtlID != IDC_BKGCOLOR && pdis->CtlID != IDC_BARCOLOR )
                 return FALSE;
 
             SetDCBrushColor( pdis->hDC, (COLORREF)GetWindowLongPtr( pdis->hwndItem, GWLP_USERDATA ) );
@@ -97,21 +100,13 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
             Changed( hWnd );
             switch ( iId )
             {
-                case IDC_SHOWCUSTOMKEYS:
-                    EnableWindow( GetDlgItem( hWnd, IDC_FIRSTKEY ), TRUE );
-                    EnableWindow( GetDlgItem( hWnd, IDC_THROUGH ), TRUE );
-                    EnableWindow( GetDlgItem( hWnd, IDC_LASTKEY ), TRUE );
-                    return TRUE;
-                case IDC_SHOWALLKEYS: case IDC_SHOWSONGKEYS:
-                    EnableWindow( GetDlgItem( hWnd, IDC_FIRSTKEY ), FALSE );
-                    EnableWindow( GetDlgItem( hWnd, IDC_THROUGH ), FALSE );
-                    EnableWindow( GetDlgItem( hWnd, IDC_LASTKEY ), FALSE );
-                    return TRUE;
                 // Color buttons. Pop up color choose dialog and set color.
                 case IDC_COLOR1: case IDC_COLOR2: case IDC_COLOR3:
                 case IDC_COLOR4: case IDC_COLOR5: case IDC_COLOR6: 
-                case IDC_BKGCOLOR:
-                case IDC_BARCOLOR:
+                case IDC_COLOR7: case IDC_COLOR8: case IDC_COLOR9:
+                case IDC_COLOR10: case IDC_COLOR11: case IDC_COLOR12:
+                case IDC_COLOR13: case IDC_COLOR14: case IDC_COLOR15:
+                case IDC_COLOR16: case IDC_BKGCOLOR: case IDC_BARCOLOR:
                 {
                     static COLORREF acrCustClr[16] = { 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 
                                                        0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF, 0x00FFFFFF }; 
@@ -164,18 +159,43 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 
                     // VisualSettings struct
                     bool bAlwaysShowControls = cVisual.bAlwaysShowControls;
-                    cVisual.eKeysShown = ( IsDlgButtonChecked( hWnd, IDC_SHOWALLKEYS ) == BST_CHECKED ? cVisual.All : 
-                                           IsDlgButtonChecked( hWnd, IDC_SHOWSONGKEYS ) == BST_CHECKED ? cVisual.Song :
-                                           IsDlgButtonChecked( hWnd, IDC_SHOWCUSTOMKEYS ) == BST_CHECKED ? cVisual.Custom :
-                                           cVisual.Song );
                     cVisual.bAlwaysShowControls = ( IsDlgButtonChecked( hWnd, IDC_SHOWCONTROLS ) == BST_CHECKED );
                     cVisual.bAssociateFiles = ( IsDlgButtonChecked( hWnd, IDC_ASSOCIATEFILES ) == BST_CHECKED );
-                    cVisual.iFirstKey = (int)SendMessage( GetDlgItem( hWnd, IDC_FIRSTKEY ), CB_GETCURSEL, 0, 0 ) + MIDI::A0;
-                    cVisual.iLastKey = (int)SendMessage( GetDlgItem( hWnd, IDC_LASTKEY ), CB_GETCURSEL, 0, 0 ) + MIDI::A0;
-                    for ( int i = 0; i < IDC_COLOR6 - IDC_COLOR1 + 1; i++ )
+                    for ( int i = 0; i < IDC_COLOR16 - IDC_COLOR1 + 1; i++ )
                         cVisual.colors[i] = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_COLOR1 + i ), GWLP_USERDATA );
                     cVisual.iBkgColor = (int)GetWindowLongPtr( GetDlgItem( hWnd, IDC_BKGCOLOR ), GWLP_USERDATA );
                     cViz.iBarColor = (int)GetWindowLongPtr(GetDlgItem(hWnd, IDC_BARCOLOR), GWLP_USERDATA);
+
+                    // Edit boxes
+                    TCHAR buf[32];
+                    double dEditVal = 0;
+
+                    HWND hWndFwdBack = GetDlgItem(hWnd, IDC_LRARROWS);
+                    int len = GetWindowText(hWndFwdBack, buf, 32);
+                    if (len > 0 && _stscanf_s(buf, TEXT("%lf"), &dEditVal) == 1)
+                        cVisual.dFwdBackSecs = dEditVal;
+                    else
+                    {
+                        MessageBox(hWnd, TEXT("Please specify a numeric value for the left and right arrows"), TEXT("Error"), MB_OK | MB_ICONEXCLAMATION);
+                        PostMessage(hWnd, WM_NEXTDLGCTL, (WPARAM)hWndFwdBack, TRUE);
+                        SetWindowLongPtr(hWnd, DWLP_MSGRESULT, PSNRET_INVALID);
+                        return TRUE;
+                    }
+
+                    HWND hWndSpeedPct = GetDlgItem(hWnd, IDC_UDARROWS);
+                    len = GetWindowText(hWndSpeedPct, buf, 32);
+                    if (len > 0 && _stscanf_s(buf, TEXT("%lf"), &dEditVal) == 1)
+                        cVisual.dSpeedUpPct = dEditVal;
+                    else
+                    {
+                        MessageBox(hWnd, TEXT("Please specify a numeric value for the up and down arrows"), TEXT("Error"), MB_OK | MB_ICONEXCLAMATION);
+                        PostMessage(hWnd, WM_NEXTDLGCTL, (WPARAM)hWndSpeedPct, TRUE);
+                        SetWindowLongPtr(hWnd, DWLP_MSGRESULT, PSNRET_INVALID);
+                        return TRUE;
+                    }
+
+                    cVisual.bShowFPS = (IsDlgButtonChecked(hWnd, IDC_DISPLAYFPS) == BST_CHECKED);
+                    cVisual.bLimitFPS = (IsDlgButtonChecked(hWnd, IDC_LIMITFPS) == BST_CHECKED);
 
                     // Report success and return
                     config.SetVisualSettings( cVisual );
@@ -195,19 +215,14 @@ INT_PTR WINAPI VisualProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 // Sets the values in the playback settings dialog. Used at init and restoring defaults
 VOID SetVisualProc( HWND hWnd, const VisualSettings &cVisual, const VizSettings& cViz )
 {
-    HWND hWndFirstKey = GetDlgItem( hWnd, IDC_FIRSTKEY );
-    HWND hWndLastKey = GetDlgItem( hWnd, IDC_LASTKEY );
-
     // Set values
-    CheckRadioButton( hWnd, IDC_SHOWALLKEYS, IDC_SHOWCUSTOMKEYS, IDC_SHOWALLKEYS + cVisual.eKeysShown );
     CheckDlgButton( hWnd, IDC_SHOWCONTROLS, cVisual.bAlwaysShowControls ? BST_CHECKED : BST_UNCHECKED );
     CheckDlgButton( hWnd, IDC_ASSOCIATEFILES, cVisual.bAssociateFiles ? BST_CHECKED : BST_UNCHECKED );
-    SendMessage( hWnd, WM_COMMAND, IDC_SHOWALLKEYS + cVisual.eKeysShown, 0 );
-    SendMessage( hWndFirstKey, CB_SETCURSEL, cVisual.iFirstKey - MIDI::A0, 0 );
-    SendMessage( hWndLastKey, CB_SETCURSEL, cVisual.iLastKey - MIDI::A0, 0 );
+    CheckDlgButton(hWnd, IDC_DISPLAYFPS, cVisual.bShowFPS ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hWnd, IDC_LIMITFPS, cVisual.bLimitFPS ? BST_CHECKED : BST_UNCHECKED);
 
     // Colors
-    for ( int i = 0; i < IDC_COLOR6 - IDC_COLOR1 + 1; i++ )
+    for ( int i = 0; i < IDC_COLOR16 - IDC_COLOR1 + 1; i++ )
         SetWindowLongPtr( GetDlgItem( hWnd, IDC_COLOR1 + i ), GWLP_USERDATA, cVisual.colors[i] );
     SetWindowLongPtr( GetDlgItem( hWnd, IDC_BKGCOLOR ), GWLP_USERDATA, cVisual.iBkgColor );
     SetWindowLongPtr( GetDlgItem( hWnd, IDC_BARCOLOR ), GWLP_USERDATA, cViz.iBarColor );
@@ -280,166 +295,6 @@ VOID SetAudioProc( HWND hWnd, const AudioSettings &cAudio )
     for ( vector< wstring >::const_iterator it = cAudio.vMIDIOutDevices.begin(); it != cAudio.vMIDIOutDevices.end(); ++it )
         SendMessage( hWndOutDevs, LB_ADDSTRING, 0, ( LPARAM )( it->c_str() ) );
     SendMessage( hWndOutDevs, LB_SETCURSEL, cAudio.iOutDevice, 0 );
-}
-
-INT_PTR WINAPI VideoProc( HWND hWnd, UINT msg, WPARAM, LPARAM lParam )
-{
-    switch (msg)
-    {
-        case WM_INITDIALOG:
-        {
-            // Config to fill out the form
-            Config &config = Config::GetConfig();
-            const VideoSettings &cVideo = config.GetVideoSettings();
-
-            CheckRadioButton( hWnd, IDC_DIRECT3D, IDC_GDI, IDC_DIRECT3D + cVideo.eRenderer );
-            CheckDlgButton( hWnd, IDC_DISPLAYFPS, cVideo.bShowFPS ? BST_CHECKED : BST_UNCHECKED );
-            CheckDlgButton( hWnd, IDC_LIMITFPS, cVideo.bLimitFPS ? BST_CHECKED : BST_UNCHECKED );
-
-            return TRUE;
-        }
-        case WM_COMMAND:
-            Changed( hWnd );
-            break;
-        case WM_NOTIFY:
-        {
-            LPNMHDR lpnmhdr = ( LPNMHDR )lParam;
-            switch (lpnmhdr->code)
-            {
-                // OK or Apply button pressed
-                case PSN_APPLY:
-                {
-                    // Get a copy of the config to overwrite the settings
-                    Config &config = Config::GetConfig();
-                    VideoSettings cVideo = config.GetVideoSettings();
-
-                    cVideo.eRenderer = ( IsDlgButtonChecked( hWnd, IDC_DIRECT3D ) == BST_CHECKED ? cVideo.Direct3D : 
-                                         IsDlgButtonChecked( hWnd, IDC_OPENGL ) == BST_CHECKED ? cVideo.OpenGL :
-                                         IsDlgButtonChecked( hWnd, IDC_GDI ) == BST_CHECKED ? cVideo.GDI :
-                                         cVideo.Direct3D );
-                    cVideo.bShowFPS = ( IsDlgButtonChecked( hWnd, IDC_DISPLAYFPS ) == BST_CHECKED );
-                    cVideo.bLimitFPS = ( IsDlgButtonChecked( hWnd, IDC_LIMITFPS ) == BST_CHECKED );
-
-                    config.SetVideoSettings( cVideo );
-                    SetWindowLongPtr( hWnd, DWLP_MSGRESULT, PSNRET_NOERROR );
-                    return TRUE;
-                }
-            }
-            break;
-        }
-    }
-    return FALSE;
-}
-
-INT_PTR WINAPI ControlsProc( HWND hWnd, UINT msg, WPARAM, LPARAM lParam )
-{
-    switch (msg)
-    {
-        case WM_INITDIALOG:
-        {
-            // Config to fill out the form
-            Config &config = Config::GetConfig();
-            const ControlsSettings &cControls = config.GetControlsSettings();
-
-            HWND hWndFwdBack = GetDlgItem( hWnd, IDC_LRARROWS );
-            HWND hWndSpeedPct = GetDlgItem( hWnd, IDC_UDARROWS );
-
-            // Edit boxes
-            TCHAR buf[32];
-            _stprintf_s( buf, TEXT( "%g" ), cControls.dFwdBackSecs );
-            SetWindowText( hWndFwdBack, buf );
-            _stprintf_s( buf, TEXT( "%g" ), cControls.dSpeedUpPct );
-            SetWindowText( hWndSpeedPct, buf );
-
-            return TRUE;
-        }
-        case WM_NOTIFY:
-        {
-            LPNMHDR lpnmhdr = ( LPNMHDR )lParam;
-            switch (lpnmhdr->code)
-            {
-                // Spin boxes. Just increment or decrement
-                case UDN_DELTAPOS:
-                    switch ( lpnmhdr->idFrom )
-                    {
-                        case IDC_LRARROWSSPIN:
-                        {
-                            TCHAR buf[32];
-                            LPNMUPDOWN lpnmud  = ( LPNMUPDOWN )lParam;
-                            HWND hWndFwdBack = GetDlgItem( hWnd, IDC_LRARROWS );
-                            double dOldVal = 0;
-                            int len = GetWindowText( hWndFwdBack, buf, 32 );
-                            if ( len > 0 && _stscanf_s( buf, TEXT( "%lf" ), &dOldVal ) == 1 )
-                            {
-                                double dNewVal = dOldVal - lpnmud->iDelta * .1;
-                                _stprintf_s( buf, TEXT( "%g" ), dNewVal );
-                                SetWindowText( hWndFwdBack, buf );
-                            }
-                            return TRUE;
-                        }
-                        case IDC_UDARROWSSPIN:
-                        {
-                            TCHAR buf[32];
-                            LPNMUPDOWN lpnmud  = ( LPNMUPDOWN )lParam;
-                            HWND hWndSpeedPct = GetDlgItem( hWnd, IDC_UDARROWS );
-                            double dOldVal = 0;
-                            int len = GetWindowText( hWndSpeedPct, buf, 32 );
-                            if ( len > 0 && _stscanf_s( buf, TEXT( "%lf" ), &dOldVal ) == 1 )
-                            {
-                                double dNewVal = dOldVal - lpnmud->iDelta;
-                                _stprintf_s( buf, TEXT( "%g" ), dNewVal );
-                                SetWindowText( hWndSpeedPct, buf );
-                            }
-                            return TRUE;
-                        }
-                    }
-                    break;
-                // OK or Apply button pressed
-                case PSN_APPLY:
-                {
-                    // Get a copy of the config to overwrite the settings
-                    Config &config = Config::GetConfig();
-                    ControlsSettings cControls = config.GetControlsSettings();
-
-                    // Edit boxes
-                    TCHAR buf[32];
-                    double dEditVal = 0;
-                    
-                    HWND hWndFwdBack = GetDlgItem( hWnd, IDC_LRARROWS );
-                    int len = GetWindowText( hWndFwdBack, buf, 32 );
-                    if ( len > 0 && _stscanf_s( buf, TEXT( "%lf" ), &dEditVal ) == 1 )
-                        cControls.dFwdBackSecs = dEditVal;
-                    else
-                    {
-                        MessageBox( hWnd, TEXT( "Please specify a numeric value for the left and right arrows" ), TEXT( "Error" ), MB_OK | MB_ICONEXCLAMATION );
-                        PostMessage( hWnd, WM_NEXTDLGCTL, ( WPARAM )hWndFwdBack, TRUE);
-                        SetWindowLongPtr( hWnd, DWLP_MSGRESULT, PSNRET_INVALID );
-                        return TRUE;
-                    }
-                    
-                    HWND hWndSpeedPct = GetDlgItem( hWnd, IDC_UDARROWS );
-                    len = GetWindowText( hWndSpeedPct, buf, 32 );
-                    if ( len > 0 && _stscanf_s( buf, TEXT( "%lf" ), &dEditVal ) == 1 )
-                        cControls.dSpeedUpPct = dEditVal;
-                    else
-                    {
-                        MessageBox( hWnd, TEXT( "Please specify a numeric value for the up and down arrows" ), TEXT( "Error" ), MB_OK | MB_ICONEXCLAMATION );
-                        PostMessage( hWnd, WM_NEXTDLGCTL, ( WPARAM )hWndSpeedPct, TRUE);
-                        SetWindowLongPtr( hWnd, DWLP_MSGRESULT, PSNRET_INVALID );
-                        return TRUE;
-                    }
-                    
-                    // Report success and return
-                    config.SetControlsSettings( cControls );
-                    SetWindowLongPtr( hWnd, DWLP_MSGRESULT, PSNRET_NOERROR );
-                    return TRUE;
-                }
-            }
-            break;
-        }
-    }
-
-    return FALSE;
 }
 
 INT_PTR WINAPI VizProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -574,6 +429,109 @@ INT_PTR WINAPI VizProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     }
 
     return FALSE;
+}
+
+INT_PTR WINAPI KeyVisProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_INITDIALOG:
+    {
+        HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
+
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Flat");
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Classic");
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Dark");
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Signal");
+        SendMessage(hWndStyle, CB_ADDSTRING, 0, (LPARAM)L"Neon");
+
+        // Config to fill out the form
+        Config& config = Config::GetConfig();
+        SetKeyVisProc(hWnd, config.GetKeyVisSettings());
+        return TRUE;
+    }
+    case WM_COMMAND:
+    {
+        int iId = LOWORD(wParam);
+        Changed(hWnd);
+        switch (iId)
+        {
+            case IDC_PERTRACK:
+            {
+                if (IsDlgButtonChecked(hWnd, IDC_PERTRACK) == BST_CHECKED)
+                    EnableWindow(GetDlgItem(hWnd, IDC_TRACKLINES), TRUE);
+                else
+                    EnableWindow(GetDlgItem(hWnd, IDC_TRACKLINES), FALSE);
+                return TRUE;
+            }
+            case IDC_RESTOREDEFAULTS:
+            {
+                KeyVisSettings cKeyVisSettings;
+                cKeyVisSettings.LoadDefaultValues();
+
+                SendMessage(hWnd, WM_SETREDRAW, FALSE, 0);
+                SetKeyVisProc(hWnd, cKeyVisSettings);
+                SendMessage(hWnd, WM_SETREDRAW, TRUE, 0);
+                InvalidateRect(hWnd, NULL, FALSE);
+                return TRUE;
+            }
+        }
+        break;
+    }
+    case WM_NOTIFY:
+    {
+        LPNMHDR lpnmhdr = (LPNMHDR)lParam;
+        switch (lpnmhdr->code)
+        {
+            // OK or Apply button pressed
+        case PSN_APPLY:
+        {
+            // Get a copy of the config to overwrite the settings
+            Config& config = Config::GetConfig();
+            KeyVisSettings cKey = config.GetKeyVisSettings();
+
+            // KeyVisSettings struct
+            cKey.iStyle = (int)SendMessage(GetDlgItem(hWnd, IDC_STYLE), CB_GETCURSEL, 0, 0) + 1;
+            cKey.bPerTrack = (IsDlgButtonChecked(hWnd, IDC_PERTRACK) == BST_CHECKED);
+            cKey.bTrackLines = (IsDlgButtonChecked(hWnd, IDC_TRACKLINES) == BST_CHECKED);
+            cKey.bVelocitySize = (IsDlgButtonChecked(hWnd, IDC_VELOCITYTOSIZE) == BST_CHECKED);
+            cKey.bSameWidth = (IsDlgButtonChecked(hWnd, IDC_SAMEWIDTH) == BST_CHECKED);
+            char Velocity[128] = {};
+            GetWindowTextA(GetDlgItem(hWnd, IDC_MINVELOCITY), Velocity, sizeof(Velocity));
+            float MinVelocity = atof(Velocity);
+            cKey.iMinVelocity = min(max(1, MinVelocity), 127);
+
+            // Report success and return
+            config.SetKeyVisSettings(cKey);
+            SetWindowLongPtr(hWnd, DWLP_MSGRESULT, PSNRET_NOERROR);
+            return TRUE;
+        }
+        }
+        break;
+    }
+    }
+
+    return FALSE;
+}
+
+// Sets the values in the playback settings dialog. Used at init and restoring defaults
+VOID SetKeyVisProc(HWND hWnd, const KeyVisSettings& cKey)
+{
+    HWND hWndStyle = GetDlgItem(hWnd, IDC_STYLE);
+
+    EnableWindow(GetDlgItem(hWnd, IDC_STYLE), TRUE);
+    EnableWindow(GetDlgItem(hWnd, IDC_TRACKLINES), cKey.bPerTrack ? TRUE : FALSE);
+    // Set values
+    CheckDlgButton(hWnd, IDC_PERTRACK, cKey.bPerTrack ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hWnd, IDC_TRACKLINES, cKey.bTrackLines ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hWnd, IDC_VELOCITYTOSIZE, cKey.bVelocitySize ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hWnd, IDC_SAMEWIDTH, cKey.bSameWidth ? BST_CHECKED : BST_UNCHECKED);
+    SendMessage(hWndStyle, CB_SETCURSEL, cKey.iStyle - 1, 0);
+
+    char buf[128] = {};
+    snprintf(buf, sizeof(buf) - 1, "%d", cKey.iMinVelocity);
+    SetDlgItemTextA(hWnd, IDC_MINVELOCITY, buf);
+
 }
 
 BOOL ToggleYN( HWND hWndListview, int iItem )

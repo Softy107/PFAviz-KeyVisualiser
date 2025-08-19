@@ -213,13 +213,10 @@ private:
 
     // Rendering
     void RenderGlobals();
-    void RenderLines();
     void RenderNotes();
     void RenderNote(const MIDIChannelEvent* pNote);
     void GenNoteXTable();
     float GetNoteX( int iNote );
-    void RenderKeys();
-    void RenderBorder();
     void RenderText();
     void RenderStatusLine(int line, float width, const char* left, const char* format, ...);
     void RenderStatus(int lines);
@@ -260,10 +257,11 @@ private:
     bool m_bPaused; // Paused state
     Timer m_Timer; // Frame timers
     Timer m_RealTimer;
-    bool m_bMute;
+    bool m_bMute, m_bShowNC;
     bool m_bAnyChannelMuted;
     double m_dVolume;
-    bool m_bTickMode = false;
+    long long llRendered, m_iNotesPlayed;
+    long long llMaxnps, llMaxplph = 0; // Max stats
 
     // FPS variables
     bool m_bShowFPS;
