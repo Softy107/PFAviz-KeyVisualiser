@@ -278,6 +278,7 @@ private:
     bool m_bShowKB;
     int m_eKeysShown;
     ChannelSettings m_csBackground;
+    ChannelSettings m_csKBRed, m_csKBWhite, m_csKBSharp, m_csKBBackground;
     vector< TrackSettings > m_vTrackSettings;
     float m_pBends[16] = {};
     deque<tuple<long long, long long>> m_dNPSNotes;
