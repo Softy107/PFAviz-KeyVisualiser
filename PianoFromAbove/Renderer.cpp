@@ -941,58 +941,27 @@ HRESULT D3D12Renderer::EndScene(bool draw_bg) {
     }
 
     // Flush the intermediate rect buffer
-    // Since I have no idea what I'm doing, AI did this and I could not care less for the slightly worse performance
+    // TODO: Handle more than RectsPerPass
     HRESULT res = S_OK;
+    auto rect_count = min(m_vRectsIntermediate.size(), RectsPerPass * 4);
+    auto rect_split = min(m_iRectSplit < 0 ? rect_count : m_iRectSplit, RectsPerPass * 4);
     if (!m_vRectsIntermediate.empty()) {
-        for (size_t i = 0; i < m_vRectsIntermediate.size(); i += RectsPerPass * 4) {
-            if (i == 0) {
-                // First batch: make sure pipeline + VB is set
-                SetPipeline(Pipeline::Rect);
-                m_pCommandList->IASetVertexBuffers(0, 1, &m_VertexBufferViews[m_uFrameIndex]);
-            }
+        D3D12_RANGE rect_range = {
+            .Begin = 0,
+            .End = rect_count * sizeof(RectVertex),
+        };
+        RectVertex* vertices = nullptr;
+        res = m_pVertexBuffers[m_uFrameIndex]->Map(0, &rect_range, (void**)&vertices);
+        if (FAILED(res))
+            return res;
+        memcpy(vertices, m_vRectsIntermediate.data(), rect_count * sizeof(RectVertex));
+        m_pVertexBuffers[m_uFrameIndex]->Unmap(0, &rect_range);
 
-            auto remaining = m_vRectsIntermediate.size() - i;
-            auto rect_count = min(remaining, RectsPerPass * 4);
-
-            // Upload this batch into the dynamic VB
-            D3D12_RANGE rect_range = { 0, rect_count * sizeof(RectVertex) };
-            RectVertex* vertices = nullptr;
-            res = m_pVertexBuffers[m_uFrameIndex]->Map(0, &rect_range, reinterpret_cast<void**>(&vertices));
-            if (FAILED(res))
-                return res;
-
-            memcpy(vertices, &m_vRectsIntermediate[i], rect_count * sizeof(RectVertex));
-            m_pVertexBuffers[m_uFrameIndex]->Unmap(0, &rect_range);
-
-            // Each rect = 4 verts, 6 indices
-            m_pCommandList->DrawIndexedInstanced((rect_count / 4) * 6, 1, 0, 0, 0);
-
-            if (remaining > rect_count) {
-                // Still more rects: flush the command list and wait for GPU
-                res = m_pCommandList->Close();
-                if (FAILED(res))
-                    return res;
-
-                ID3D12CommandList* command_lists[] = { m_pCommandList.Get() };
-                m_pCommandQueue->ExecuteCommandLists(1, command_lists);
-
-                res = WaitForGPU();
-                if (FAILED(res))
-                    return res;
-
-                // Reset command allocator + command list
-                m_pCommandAllocator[m_uFrameIndex]->Reset();
-                m_pCommandList->Reset(m_pCommandAllocator[m_uFrameIndex].Get(), m_pRectPipelineState.Get());
-
-                // Re-establish pipeline + state
-                SetPipeline(Pipeline::Rect);
-                SetupCommandList();
-                m_pCommandList->IASetVertexBuffers(0, 1, &m_VertexBufferViews[m_uFrameIndex]);
-            }
-        }
+        // Draw the first rect batch
+        m_pCommandList->DrawIndexedInstanced(rect_split / 4 * 6, 1, 0, 0, 0);
     }
 
-    // Flush the intermediate note buffer 
+    // Flush the intermediate note buffer
     if (!m_vNotesIntermediate.empty()) {
         for (size_t i = 0; i < m_vNotesIntermediate.size(); i += NotesPerPass) {
             if (i == 0)
@@ -1039,6 +1008,13 @@ HRESULT D3D12Renderer::EndScene(bool draw_bg) {
                 SetupCommandList();
             }
         }
+    }
+
+    // Draw the second rect batch
+    if (rect_count > rect_split) {
+        SetPipeline(Pipeline::Rect);
+        m_pCommandList->IASetVertexBuffers(0, 1, &m_VertexBufferViews[m_uFrameIndex]);
+        m_pCommandList->DrawIndexedInstanced((rect_count - rect_split) / 4 * 6, 1, rect_split / 4 * 6, 0, 0);
     }
 
     // Draw ImGui
