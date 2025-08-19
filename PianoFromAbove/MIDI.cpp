@@ -1207,7 +1207,6 @@ bool MIDIOutDevice::Open( int iDev )
 bool MIDIOutDevice::OpenKDMAPI() {
     if (m_bIsOpen)
         Close();
-
     m_sDevice = L"KDMAPI";
     m_bIsKDMAPI = true;
 

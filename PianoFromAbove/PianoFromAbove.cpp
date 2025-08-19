@@ -53,7 +53,7 @@ DWORD WINAPI UpdateCheckProc(LPVOID) {
         return 0;
     }
 
-    HINTERNET request = WinHttpOpenRequest(connect, L"GET", L"/repos/Softy107/PFAviz-KeyVisualiser/releases",
+    HINTERNET request = WinHttpOpenRequest(connect, L"GET", L"/repos/khang06/PianoFromAbove/releases",
         NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
     if (!request) {
         WinHttpCloseHandle(connect);
@@ -179,7 +179,7 @@ INT WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, INT nCmdShow )
     }
 
     // Create the application window
-    g_hWnd = CreateWindowEx( 0, CLASSNAME, L"PFAviz - KeyVisualiser" , WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, cView.GetMainLeft(), cView.GetMainTop(),
+    g_hWnd = CreateWindowEx( 0, CLASSNAME, L"pfavizkhang-dx12 " __DATE__, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, cView.GetMainLeft(), cView.GetMainTop(),
                              cView.GetMainWidth(), cView.GetMainHeight(), NULL, NULL, wc.hInstance, NULL );
     if ( !g_hWnd ) return 1;
 
@@ -248,7 +248,7 @@ DWORD WINAPI GameThread( LPVOID lpParameter )
 
     // Initialize Direct3D
     D3D12Renderer *pRenderer = new D3D12Renderer();
-    auto init_res = pRenderer->Init(g_hWndGfx, Config::GetConfig().GetVisualSettings().bLimitFPS);
+    auto init_res = pRenderer->Init(g_hWndGfx, Config::GetConfig().GetVideoSettings().bLimitFPS);
     if( FAILED(std::get<0>(init_res)) )
     {
         wchar_t msg[1024] = {};
@@ -268,9 +268,9 @@ DWORD WINAPI GameThread( LPVOID lpParameter )
     // Put the adapter in the window title
     wchar_t buf[1024] = {};
 #ifdef __AVX2__
-    _snwprintf_s(buf, 1024, L"PFAviz - KeyVisualiser (AVX2 build)", pRenderer->GetAdapterName().c_str());
+    _snwprintf_s(buf, 1024, L"pfavizkhang-dx12 %S (AVX2 build, Device: %s)", __DATE__, pRenderer->GetAdapterName().c_str());
 #else
-    _snwprintf_s(buf, 1024, L"PFAviz - KeyVisualiser (SSE4.2 build)", pRenderer->GetAdapterName().c_str());
+    _snwprintf_s(buf, 1024, L"pfavizkhang-dx12 %S (SSE4.2 build, Device: %s)", __DATE__, pRenderer->GetAdapterName().c_str());
 #endif
     SetWindowTextW(g_hWnd, buf);
 
